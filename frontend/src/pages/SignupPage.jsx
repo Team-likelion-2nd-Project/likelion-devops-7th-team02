@@ -4,6 +4,7 @@ import { Eye, EyeOff, X } from 'lucide-react'
 import './Auth.css'
 
 function SignupPage() {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
@@ -16,7 +17,8 @@ function SignupPage() {
   const passwordMismatch =
   passwordConfirm !== '' && password !== passwordConfirm
 
-  const isFormValid =
+  const isFormValid =""
+  name.trim() !== '' &&
   email.trim() !== '' &&
   password !== '' &&
   passwordConfirm !== '' &&
@@ -43,6 +45,20 @@ function SignupPage() {
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
+          {/* Name */}
+            <div className="form-group">
+              <label htmlFor="name">이름</label>
+
+              <input
+                id="name"
+                type="text"
+                placeholder="이름을 입력하세요."
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
+              />
+            </div>
+
           {/* Email */}
           <div className="form-group">
             <label htmlFor="email">이메일</label>
