@@ -17,12 +17,13 @@ function SignupPage() {
   const passwordMismatch =
   passwordConfirm !== '' && password !== passwordConfirm
 
-  const isFormValid =""
+  const isFormValid =
   name.trim() !== '' &&
   email.trim() !== '' &&
   password !== '' &&
   passwordConfirm !== '' &&
   !passwordMismatch
+
 
   const handleSubmit = (event) => {
     event.preventDefault()
