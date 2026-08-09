@@ -28,6 +28,32 @@ export const projects = [
         role: 'CI/CD',
       },
     ],
+    tasks: [
+      {
+        id: 1,
+        title: '로그인 UI 구현',
+        status: 'TODO',
+        assignee: '이프론트',
+      },
+      {
+        id: 2,
+        title: '프로젝트 API 구현',
+        status: 'IN_PROGRESS',
+        assignee: '김백엔드',
+      },
+      {
+        id: 3,
+        title: 'EKS 배포 환경 구성',
+        status: 'DONE',
+        assignee: '박인프라',
+      },
+      {
+        id: 4,
+        title: '회원가입 Validation 처리',
+        status: 'TODO',
+        assignee: '이프론트',
+      },
+    ],
   },
   {
     id: 2,
@@ -37,6 +63,7 @@ export const projects = [
     taskCount: 8,
     updatedAt: '어제',
     members: [],
+    tasks: [],
   },
   {
     id: 3,
@@ -46,5 +73,6 @@ export const projects = [
     taskCount: 15,
     updatedAt: '3일 전',
     members: [],
+    tasks: [],
   },
 ]
