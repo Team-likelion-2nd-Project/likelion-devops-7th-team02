@@ -23,7 +23,6 @@ public class AuthController {
     public ResponseEntity<ApiResponse<SignupResponse>> signup(
             @Valid @RequestBody SignupRequest request
     ) {
-
         SignupResponse response = authService.signup(request);
 
         return ResponseEntity
@@ -37,10 +36,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-        public ResponseEntity<ApiResponse<LoginResponse>> login(
-                @Valid @RequestBody LoginRequest request
-        ) {
-
+    public ResponseEntity<ApiResponse<LoginResponse>> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
         LoginResponse response = authService.login(request);
 
         return ResponseEntity.ok(

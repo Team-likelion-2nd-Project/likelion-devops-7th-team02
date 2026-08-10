@@ -37,9 +37,9 @@ public enum ErrorCode {
     ),
 
     INVALID_CREDENTIALS(
-        HttpStatus.UNAUTHORIZED,
-        "INVALID_CREDENTIALS",
-        "이메일 또는 비밀번호가 올바르지 않습니다."
+            HttpStatus.UNAUTHORIZED,
+            "INVALID_CREDENTIALS",
+            "이메일 또는 비밀번호가 올바르지 않습니다."
     ),
 
     INTERNAL_SERVER_ERROR(

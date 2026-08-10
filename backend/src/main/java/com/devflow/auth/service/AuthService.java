@@ -1,5 +1,7 @@
 package com.devflow.auth.service;
 
+import com.devflow.auth.dto.LoginRequest;
+import com.devflow.auth.dto.LoginResponse;
 import com.devflow.auth.dto.SignupRequest;
 import com.devflow.auth.dto.SignupResponse;
 import com.devflow.global.exception.BusinessException;
@@ -11,9 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.devflow.auth.dto.LoginRequest;
-import com.devflow.auth.dto.LoginResponse;
-import com.devflow.global.jwt.JwtTokenProvider;
 
 @Service
 @RequiredArgsConstructor
@@ -63,7 +62,7 @@ public class AuthService {
         }
 
         String accessToken = jwtTokenProvider.createToken(
-             user.getId(),
+                user.getId(),
                 user.getEmail()
         );
 
