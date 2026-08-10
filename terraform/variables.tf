@@ -37,11 +37,11 @@ variable "public_subnet_cidrs" {
 variable "private_app_subnet_cidrs" {
   description = "List of private application subnet CIDRs"
   type        = list(string)
-  default     = ["10.0.11.0/24", "10.0.12.0/24"]
+  default     = ["10.0.10.0/24", "10.0.11.0/24"]
 }
 
 variable "private_db_subnet_cidrs" {
   description = "List of private database subnet CIDRs"
   type        = list(string)
-  default     = ["10.0.21.0/24", "10.0.22.0/24"]
+  default     = ["10.0.20.0/24", "10.0.21.0/24"]
 }

@@ -15,3 +15,9 @@ variable "aws_region" {
   type        = string
   default     = "ap-northeast-1"
 }
+
+variable "db_password" {
+  description = "Database password (sensitive)"
+  type        = string
+  sensitive   = true
+}
