@@ -8,6 +8,7 @@
 *.jks
 serviceAccountKey.json
 credentials.json
+opencode.json
 
 # ── Node / Frontend ───────────────────────────
 node_modules/
@@ -51,3 +52,5 @@ Thumbs.db
 *.sqlite3
 /uploads/
 /tmp/
+WORK_LOG_*
+*.tar.*
