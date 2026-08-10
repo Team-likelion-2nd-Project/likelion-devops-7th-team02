@@ -1,9 +1,13 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { signup } from '../api/authApi'
+import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, X } from 'lucide-react'
 import './Auth.css'
 
 function SignupPage() {
+  const navigate = useNavigate()
+  const [isLoading, setIsLoading] = useState(false)
+
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -20,12 +24,12 @@ function SignupPage() {
   const isFormValid =
   name.trim() !== '' &&
   email.trim() !== '' &&
-  password !== '' &&
+  password.length >= 8 &&
   passwordConfirm !== '' &&
   !passwordMismatch
 
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     if (!isFormValid) {
@@ -33,8 +37,25 @@ function SignupPage() {
     }
 
     setErrorMessage('')
+    setIsLoading(true)
+    try {
+      await signup({
+        email: email.trim(),
+        password,
+        name: name.trim(),
+      })
+      navigate('/login')
+    } catch (error) {
+      const errorCode = error.response?.data?.code
+      const message = error.response?.data?.message
 
-    // TODO: 회원가입 Validation 및 API 연동
+      console.log(errorCode, message)
+      setErrorMessage(
+        message ?? '요청 처리 중 오류가 발생했습니다.'
+      )
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -110,6 +131,11 @@ function SignupPage() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+            {password !== '' && password.length < 8 && (
+              <p className="field-error">
+                비밀번호는 최소 8자 이상이어야 합니다.
+              </p>
+            )}
           </div>
 
           {/* Password Confirm */}
@@ -161,9 +187,9 @@ function SignupPage() {
           <button
             className="auth-button"
             type="submit"
-            disabled={!isFormValid}
+            disabled={!isFormValid || isLoading}
           >
-            회원가입
+            {isLoading ? '회원가입 중...' : '회원가입'}
           </button>
         </form>
 

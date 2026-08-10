@@ -1,10 +1,21 @@
-import axios from 'axios';
+import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL, // 백엔드 서버의 URL로 변경
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-});
+})
 
-export default api;
+api.interceptors.request.use((config) => {
+  const accessToken = localStorage.getItem('accessToken')
+  const tokenType = localStorage.getItem('tokenType') || 'Bearer'
+
+  if (accessToken) {
+    config.headers.Authorization = `${tokenType} ${accessToken}`
+  }
+
+  return config
+})
+
+export default api
