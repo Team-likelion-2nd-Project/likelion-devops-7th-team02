@@ -72,7 +72,7 @@
 ## NAT Gateway 설정
 
 - **개수**: 1개 (비용 최적화)
-- **위치**: AZ-A (ap-northeast-2a)
+- **위치**: AZ-A (ap-northeast-1a)
 - **Elastic IP**: 1개 (NAT Gateway용)
 - **가용성 참고사항**: 이 구성은 기본적인 인터넷 접근을 제공하지만 AZ 간 완전한 고가용성을 제공하지 않습니다. 프로덕션 환경에서는 AZ당 1개씩 NAT Gateway를 배포하는 것을 고려하세요.
 

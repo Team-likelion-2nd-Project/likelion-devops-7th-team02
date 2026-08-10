@@ -2,6 +2,7 @@
 *.tfstate
 *.tfstate.*
 *.tfstate.backup
+*.tfvars
 
 # Terraform Local State
 .terraform/
@@ -21,3 +22,4 @@ secrets.tfvars
 *.swp
 *.swo
 *~
+WORK_LOG_*
