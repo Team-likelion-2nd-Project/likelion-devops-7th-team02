@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { projects } from '../mocks/projects'
 import './ProjectDetailPage.css'
@@ -8,6 +9,36 @@ function ProjectDetailPage() {
   const project = projects.find(
     (project) => project.id === Number(projectId)
   )
+
+  const [memberList, setMemberList] = useState(project?.members ?? [])
+  const [isMemberCreateOpen, setIsMemberCreateOpen] = useState(false)
+  const [memberName, setMemberName] = useState('')
+  const [memberRole, setMemberRole] = useState('Frontend')
+
+  const isMemberFormValid = memberName.trim() !== ''
+
+  const closeMemberCreateForm = () => {
+    setIsMemberCreateOpen(false)
+    setMemberName('')
+    setMemberRole('Frontend')
+  }
+
+  const handleCreateMember = () => {
+    if (!isMemberFormValid) return
+
+    const newMember = {
+      id: Date.now(),
+      name: memberName.trim(),
+      role: memberRole,
+    }
+
+    setMemberList((prevMembers) => [
+      ...prevMembers,
+      newMember,
+    ])
+
+    closeMemberCreateForm()
+  }
 
   if (!project) {
     return (
@@ -34,7 +65,7 @@ function ProjectDetailPage() {
       <div className="project-summary">
         <div className="project-summary-card">
           <span>멤버</span>
-          <strong>{project.memberCount}명</strong>
+          <strong>{memberList.length}명</strong>
         </div>
 
         <div className="project-summary-card">
@@ -61,31 +92,79 @@ function ProjectDetailPage() {
             <button
               type="button"
               className="project-member-add-button"
+              onClick={() => setIsMemberCreateOpen(true)}
             >
               + 멤버 추가
             </button>
           </div>
 
-          {project.members.length === 0 ? (
-            <p className="project-section-empty">
-              등록된 멤버가 없습니다.
-            </p>
-          ) : (
-            <div className="project-member-list">
-              {project.members.map((member) => (
-                <div
-                  key={member.id}
-                  className="project-member-item"
+          {isMemberCreateOpen && (
+            <div className="project-member-create-form">
+              <div className="project-member-form-field">
+                <label htmlFor="member-name">이름</label>
+                <input
+                  id="member-name"
+                  type="text"
+                  value={memberName}
+                  onChange={(event) => setMemberName(event.target.value)}
+                />
+              </div>
+
+              <div className="project-member-form-field">
+                <label htmlFor="member-role">역할</label>
+                <select
+                  id="member-role"
+                  value={memberRole}
+                  onChange={(event) => setMemberRole(event.target.value)}
                 >
-                  <div>
-                    <strong>{member.name}</strong>
-                    <span>{member.role}</span>
-                  </div>
-                </div>
-              ))}
+                  <option value="Frontend">Frontend</option>
+                  <option value="Backend">Backend</option>
+                  <option value="Infra">Infra</option>
+                  <option value="CI/CD">CI/CD</option>
+                </select>
+              </div>
+
+              <div className="project-member-form-actions">
+                <button
+                  type="button"
+                  className="project-member-form-cancel-button"
+                  onClick={closeMemberCreateForm}
+                >
+                  취소
+                </button>
+
+                <button
+                  type="button"
+                  className="project-member-submit-button"
+                  onClick={handleCreateMember}
+                  disabled={!isMemberFormValid}
+                >
+                  추가
+                </button>
+              </div>
             </div>
           )}
         </section>
+
+        {memberList.length === 0 ? (
+          <p className="project-section-empty">
+            등록된 멤버가 없습니다.
+          </p>
+        ) : (
+          <div className="project-member-list">
+            {memberList.map((member) => (
+              <div
+                key={member.id}
+                className="project-member-item"
+              >
+                <div>
+                  <strong>{member.name}</strong>
+                  <span>{member.role}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <section className="project-section">
           <h2>서비스 상태</h2>

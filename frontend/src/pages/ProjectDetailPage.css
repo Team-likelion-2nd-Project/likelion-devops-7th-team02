@@ -153,3 +153,76 @@
   margin: 0;
   color: #9ca3af;
 }
+
+.project-member-create-form {
+  display: grid;
+  gap: 16px;
+
+  margin-bottom: 20px;
+  padding: 20px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background-color: #f9fafb;
+}
+
+.project-member-form-field {
+  display: grid;
+  gap: 8px;
+}
+
+.project-member-form-field label {
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.project-member-form-field input,
+.project-member-form-field select {
+  width: 100%;
+  padding: 10px 12px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+
+  background-color: #ffffff;
+  color: #111827;
+}
+
+.project-member-form-field input:focus,
+.project-member-form-field select:focus {
+  outline: 2px solid #bfdbfe;
+  border-color: #2563eb;
+}
+
+.project-member-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.project-member-cancel-button,
+.project-member-submit-button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.project-member-cancel-button {
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #374151;
+}
+
+.project-member-submit-button {
+  border: 1px solid #2563eb;
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.project-member-submit-button:disabled {
+  border-color: #d1d5db;
+  background-color: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
