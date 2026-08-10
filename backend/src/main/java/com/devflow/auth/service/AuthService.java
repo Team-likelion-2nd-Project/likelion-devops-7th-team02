@@ -4,12 +4,16 @@ import com.devflow.auth.dto.SignupRequest;
 import com.devflow.auth.dto.SignupResponse;
 import com.devflow.global.exception.BusinessException;
 import com.devflow.global.exception.ErrorCode;
+import com.devflow.global.jwt.JwtTokenProvider;
 import com.devflow.user.entity.User;
 import com.devflow.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.devflow.auth.dto.LoginRequest;
+import com.devflow.auth.dto.LoginResponse;
+import com.devflow.global.jwt.JwtTokenProvider;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +21,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional
     public SignupResponse signup(SignupRequest request) {
@@ -36,5 +41,32 @@ public class AuthService {
         User savedUser = userRepository.save(user);
 
         return SignupResponse.from(savedUser);
+    }
+
+    @Transactional(readOnly = true)
+    public LoginResponse login(LoginRequest request) {
+
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(
+                        () -> new BusinessException(
+                                ErrorCode.INVALID_CREDENTIALS
+                        )
+                );
+
+        if (!passwordEncoder.matches(
+                request.password(),
+                user.getPassword()
+        )) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_CREDENTIALS
+            );
+        }
+
+        String accessToken = jwtTokenProvider.createToken(
+             user.getId(),
+                user.getEmail()
+        );
+
+        return LoginResponse.of(accessToken);
     }
 }
