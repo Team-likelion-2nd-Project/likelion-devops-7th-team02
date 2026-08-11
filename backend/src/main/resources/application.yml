@@ -26,3 +26,25 @@ springdoc:
 jwt:
   secret: ${JWT_SECRET:devflow-local-jwt-secret-key-devflow-local-jwt-secret-key}
   expiration: ${JWT_EXPIRATION:3600000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
