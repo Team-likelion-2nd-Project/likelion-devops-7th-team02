@@ -2,6 +2,9 @@ package com.devflow.project.service;
 
 import com.devflow.global.exception.BusinessException;
 import com.devflow.global.exception.ErrorCode;
+import com.devflow.member.entity.ProjectMember;
+import com.devflow.member.repository.ProjectMemberRepository;
+import com.devflow.member.type.ProjectRole;
 import com.devflow.project.dto.ProjectCreateRequest;
 import com.devflow.project.dto.ProjectListResponse;
 import com.devflow.project.dto.ProjectResponse;
@@ -21,6 +24,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
     @Transactional
     public ProjectResponse createProject(
@@ -41,15 +45,25 @@ public class ProjectService {
 
         Project savedProject = projectRepository.save(project);
 
+        // 프로젝트 생성자를 OWNER 역할의 ProjectMember로 자동 등록
+        ProjectMember ownerMember = new ProjectMember(
+                savedProject,
+                owner,
+                ProjectRole.OWNER
+        );
+
+        projectMemberRepository.save(ownerMember);
+
         return ProjectResponse.from(savedProject);
     }
 
     @Transactional(readOnly = true)
     public List<ProjectListResponse> getMyProjects(Long userId) {
 
-        return projectRepository
-                .findAllByOwnerIdOrderByCreatedAtDesc(userId)
+        return projectMemberRepository
+                .findAllByUserId(userId)
                 .stream()
+                .map(ProjectMember::getProject)
                 .map(ProjectListResponse::from)
                 .toList();
     }
@@ -65,7 +79,14 @@ public class ProjectService {
                         () -> new BusinessException(ErrorCode.NOT_FOUND)
                 );
 
-        if (!project.getOwner().getId().equals(userId)) {
+        // 프로젝트에 등록된 멤버인지 확인
+        boolean isMember =
+                projectMemberRepository.existsByProjectIdAndUserId(
+                        projectId,
+                        userId
+                );
+
+        if (!isMember) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 

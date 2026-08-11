@@ -41,7 +41,17 @@ public enum ErrorCode {
             "INVALID_CREDENTIALS",
             "이메일 또는 비밀번호가 올바르지 않습니다."
     ),
+    DUPLICATE_PROJECT_MEMBER(
+            HttpStatus.CONFLICT,
+            "DUPLICATE_PROJECT_MEMBER",
+            "이미 프로젝트에 등록된 사용자입니다."
+    ),
 
+    PROJECT_MEMBER_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "PROJECT_MEMBER_NOT_FOUND",
+            "프로젝트 멤버를 찾을 수 없습니다."
+    ),
     INTERNAL_SERVER_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "INTERNAL_SERVER_ERROR",
