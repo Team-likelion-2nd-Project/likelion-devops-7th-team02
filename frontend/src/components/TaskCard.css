@@ -1,0 +1,135 @@
+.task-card {
+  padding: 16px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+
+  background-color: #ffffff;
+}
+
+.task-card h3 {
+  margin: 0 0 16px;
+
+  color: #111827;
+  font-size: 15px;
+}
+
+.task-card-field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.task-card-field label {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.task-card-field select {
+  width: 100%;
+  padding: 8px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+
+  background-color: #ffffff;
+  color: #374151;
+}
+
+.task-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.task-delete-button {
+  padding: 6px 10px;
+
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+
+  background-color: #ffffff;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+}
+.task-card-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.task-card-title h3 {
+  margin: 0;
+}
+
+.task-edit-button {
+  padding: 4px 8px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+
+  background-color: #ffffff;
+  color: #374151;
+  font-size: 12px;
+}
+
+.task-edit-area {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.task-edit-input {
+  width: 100%;
+  padding: 8px 10px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+
+  color: #111827;
+}
+
+.task-edit-input:focus {
+  outline: 2px solid #bfdbfe;
+  border-color: #2563eb;
+}
+
+.task-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.task-edit-cancel,
+.task-edit-save {
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.task-edit-cancel {
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #374151;
+}
+
+.task-edit-save {
+  border: 1px solid #2563eb;
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.task-edit-save:disabled {
+  border-color: #d1d5db;
+  background-color: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
