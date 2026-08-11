@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { X } from 'lucide-react'
 import './TaskEditModal.css'
 
 function TaskEditModal({
-  isOpen,
   task,
   members,
   onSave,
@@ -11,21 +10,11 @@ function TaskEditModal({
 }) {
   const [title, setTitle] = useState('')
   const [status, setStatus] = useState('TODO')
-  const [assignee, setAssignee] = useState('')
-
-  useEffect(() => {
-    if (!isOpen) return
-
-    setTitle(task.title)
-    setStatus(task.status)
-    setAssignee(
-      task.assignee === '담당자 없음'
-        ? ''
-        : task.assignee
-    )
-  }, [isOpen, task])
-
-  if (!isOpen) return null
+  const [assignee, setAssignee] = useState(
+    task.assignee === '담당자 없음'
+      ? ''
+      : task.assignee
+  )
 
   const isFormValid = title.trim() !== ''
 

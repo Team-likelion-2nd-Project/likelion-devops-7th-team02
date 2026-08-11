@@ -103,13 +103,14 @@ function TaskCard({
         </div>
       </article>
 
-      <TaskEditModal
-        isOpen={isEditOpen}
-        task={task}
-        members={members}
-        onSave={handleEditSave}
-        onClose={() => setIsEditOpen(false)}
-      />
+      {isEditOpen && (
+        <TaskEditModal
+          task={task}
+          members={members}
+          onSave={handleEditSave}
+          onClose={() => setIsEditOpen(false)}
+        />
+      )}
 
       <ConfirmModal
         isOpen={isDeleteOpen}

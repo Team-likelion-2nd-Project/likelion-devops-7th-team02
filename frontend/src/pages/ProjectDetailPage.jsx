@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ProjectContext from '../context/ProjectContext'
 import TaskCard from '../components/TaskCard'
@@ -8,6 +8,16 @@ import './ProjectDetailPage.css'
 
 function ProjectDetailPage() {
   const { projectId } = useParams()
+
+  return (
+    <ProjectDetailContent
+      key={projectId}
+      projectId={projectId}
+    />
+  )
+}
+
+function ProjectDetailContent({ projectId }) {
   const { projectList } = useContext(ProjectContext)
 
   const project = projectList.find(
@@ -22,11 +32,6 @@ function ProjectDetailPage() {
   const [isTaskCreateOpen, setIsTaskCreateOpen] = useState(false)
   const [taskList, setTaskList] = useState(project?.tasks ?? [])
   const [openTaskMenuId, setOpenTaskMenuId] = useState(null)
-
-  useEffect(() => {
-    setTaskList(project?.tasks ?? [])
-    setMemberList(project?.members ?? [])
-  }, [project])
 
   const handleCreateMember = ({
     name,
