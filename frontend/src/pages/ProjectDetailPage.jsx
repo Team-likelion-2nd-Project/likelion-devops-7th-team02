@@ -85,6 +85,16 @@ function ProjectDetailPage() {
     )
   }
 
+  const handleTaskTitleChange = (taskId, title) => {
+    setTaskList((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === taskId
+          ? { ...task, title }
+          : task
+      )
+    )
+  }
+
   const handleTaskAssigneeChange = (taskId, assignee) => {
     setTaskList((prevTasks) =>
       prevTasks.map((task) =>
@@ -267,6 +277,7 @@ function ProjectDetailPage() {
                     key={task.id}
                     task={task}
                     members={memberList}
+                    onTitleChange={handleTaskTitleChange}
                     onStatusChange={handleTaskStatusChange}
                     onAssigneeChange={handleTaskAssigneeChange}
                     onDelete={handleDeleteTask}
@@ -287,6 +298,7 @@ function ProjectDetailPage() {
                     key={task.id}
                     task={task}
                     members={memberList}
+                    onTitleChange={handleTaskTitleChange}
                     onStatusChange={handleTaskStatusChange}
                     onAssigneeChange={handleTaskAssigneeChange}
                     onDelete={handleDeleteTask}
@@ -307,6 +319,7 @@ function ProjectDetailPage() {
                     key={task.id}
                     task={task}
                     members={memberList}
+                    onTitleChange={handleTaskTitleChange}
                     onStatusChange={handleTaskStatusChange}
                     onAssigneeChange={handleTaskAssigneeChange}
                     onDelete={handleDeleteTask}
