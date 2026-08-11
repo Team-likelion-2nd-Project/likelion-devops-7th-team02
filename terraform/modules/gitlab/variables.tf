@@ -11,18 +11,12 @@ variable "environment" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
-  default     = "t3.medium"
+  default     = "t3.large"
 }
 
 variable "ami_id" {
   description = "AMI ID for GitLab EC2"
   type        = string
-}
-
-variable "key_name" {
-  description = "Key pair name for SSH access"
-  type        = string
-  default     = ""
 }
 
 variable "root_volume_size" {
@@ -57,3 +51,9 @@ variable "instance_name" {
   type        = string
   default     = "gitlab"
 }
+
+variable "gitlab_hostname" {
+  description = "Gitlab external hostname"
+  type        = string
+}
+

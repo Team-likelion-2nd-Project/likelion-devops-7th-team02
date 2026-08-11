@@ -25,12 +25,12 @@ module "gitlab" {
 
   project_name      = var.project_name
   environment       = var.environment
-  instance_type     = "t3.medium"
-  ami_id            = "ami-05f4eb3328c0dabc5"
+  instance_type     = var.gitlab_instance_type
+  ami_id            = var.gitlab_ami_id
   vpc_id            = module.network.vpc_id
   subnet_id         = module.network.public_subnet_ids[0]
   security_group_id = module.security.gitlab_security_group_id
-  key_name          = ""
+  gitlab_hostname   = var.gitlab_hostname
 }
 
 module "rds" {
@@ -38,13 +38,50 @@ module "rds" {
 
   project_name      = var.project_name
   environment       = var.environment
-  db_name           = "devflow_db"
-  db_username       = "dbadmin"
+  db_name           = var.db_name
+  db_username       = var.db_username
   db_password       = var.db_password
-  instance_class    = "db.t3.medium"
-  allocated_storage = 50
+  instance_class    = var.db_instance
+  allocated_storage = var.db_storage
   vpc_id            = module.network.vpc_id
   subnet_ids        = module.network.private_db_subnet_ids
   security_group_id = module.security.rds_security_group_id
-  multi_az          = false
+  multi_az          = var.db_multiaz
+}
+
+module "eks" {
+  source = "../../modules/eks"
+
+  project_name               = var.project_name
+  environment                = var.environment
+  private_app_subnet_ids     = module.network.private_app_subnet_ids
+  eks_node_security_group_id = module.security.eks_node_security_group_id
+  gitlab_security_group_id   = module.security.gitlab_security_group_id
+  gitlab_runner_role_arn     = module.gitlab.iam_role_arn
+  kubernetes_version         = var.kubernetes_version
+  node_instance_type         = var.node_instance_type
+  node_min_size              = 2
+  node_desired_size          = 2
+  node_max_size              = 4
+}
+
+resource "aws_iam_role_policy" "gitlab_eks_describe" {
+  name = "gitlab-eks-describe"
+  role = module.gitlab.iam_role_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Action = [
+          "eks:DescribeCluster"
+        ]
+
+        Resource = module.eks.cluster_arn
+      }
+    ]
+  })
 }

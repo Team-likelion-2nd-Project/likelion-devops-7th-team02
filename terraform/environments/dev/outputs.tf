@@ -67,3 +67,64 @@ output "db_subnet_group_name" {
   description = "RDS DB subnet group name"
   value       = module.rds.db_subnet_group_name
 }
+
+# --- EKS -----------------------------------------------------------------
+output "eks_cluster_name" {
+  description = "EKS cluster name"
+  value       = module.eks.cluster_name
+}
+
+output "eks_cluster_arn" {
+  description = "EKS cluster ARN"
+  value       = module.eks.cluster_arn
+}
+
+output "eks_cluster_endpoint" {
+  description = "EKS cluster API endpoint (private + public)"
+  value       = module.eks.cluster_endpoint
+}
+
+output "eks_cluster_version" {
+  description = "Kubernetes version in use on the EKS cluster"
+  value       = module.eks.cluster_version
+}
+
+output "eks_cluster_security_group_id" {
+  description = "Security group ID attached to the EKS cluster control plane (created by EKS)"
+  value       = module.eks.cluster_security_group_id
+}
+
+output "eks_cluster_role_arn" {
+  description = "IAM role ARN for the EKS cluster"
+  value       = module.eks.cluster_iam_role_arn
+}
+
+output "eks_node_role_arn" {
+  description = "IAM role ARN for managed node group EC2 instances"
+  value       = module.eks.node_role_arn
+}
+
+output "eks_vpc_cni_role_arn" {
+  description = "Dedicated IAM role ARN used by kube-system/aws-node (VPC CNI)"
+  value       = module.eks.vpc_cni_role_arn
+}
+
+output "eks_oidc_provider_arn" {
+  description = "ARN of the EKS OIDC provider for service-account-level IAM integration"
+  value       = module.eks.oidc_provider_arn
+}
+
+output "eks_oidc_provider_url" {
+  description = "URL of the EKS OIDC provider"
+  value       = module.eks.oidc_provider_url
+}
+
+output "eks_node_group_name" {
+  description = "EKS managed node group name"
+  value       = module.eks.node_group_name
+}
+
+output "eks_launch_template_id" {
+  description = "Launch template ID used by the managed node group (enforces DevFlow EKS Node SG)"
+  value       = module.eks.launch_template_id
+}
