@@ -22,9 +22,13 @@ public class JwtTokenProvider {
         this.secretKey = Keys.hmacShaKeyFor(
                 secret.getBytes(StandardCharsets.UTF_8)
         );
+
         this.expiration = expiration;
     }
 
+    /**
+     * JWT Access Token 생성
+     */
     public String createToken(Long userId, String email) {
 
         Date now = new Date();
@@ -39,5 +43,38 @@ public class JwtTokenProvider {
                 .expiration(expiryDate)
                 .signWith(secretKey)
                 .compact();
+    }
+
+    /**
+     * JWT 유효성 검증
+     */
+    public boolean validateToken(String token) {
+
+        try {
+            Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token);
+
+            return true;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * JWT에서 userId 추출
+     */
+    public Long getUserId(String token) {
+
+        String subject = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
+
+        return Long.valueOf(subject);
     }
 }
