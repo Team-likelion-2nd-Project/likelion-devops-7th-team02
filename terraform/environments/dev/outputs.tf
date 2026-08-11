@@ -18,22 +18,52 @@ output "private_db_subnet_ids" {
   value       = module.network.private_db_subnet_ids
 }
 
-output "nat_gateway_id" {
-  description = "NAT Gateway ID"
-  value       = module.network.nat_gateway_id
+output "alb_security_group_id" {
+  description = "ALB Security Group ID"
+  value       = module.security.alb_security_group_id
 }
 
-output "internet_gateway_id" {
-  description = "Internet Gateway ID"
-  value       = module.network.internet_gateway_id
+output "gitlab_security_group_id" {
+  description = "GitLab Security Group ID"
+  value       = module.security.gitlab_security_group_id
 }
 
-output "availability_zones" {
-  description = "List of availability zones used"
-  value       = module.network.availability_zones
+output "eks_node_security_group_id" {
+  description = "EKS Node Security Group ID"
+  value       = module.security.eks_node_security_group_id
 }
 
-output "vpc_cidr" {
-  description = "VPC CIDR block"
-  value       = module.network.vpc_cidr
+output "rds_security_group_id" {
+  description = "RDS Security Group ID"
+  value       = module.security.rds_security_group_id
+}
+
+output "gitlab_instance_id" {
+  description = "GitLab EC2 Instance ID"
+  value       = module.gitlab.instance_id
+}
+
+output "gitlab_private_ip" {
+  description = "GitLab EC2 Private IP"
+  value       = module.gitlab.private_ip
+}
+
+output "gitlab_public_ip" {
+  description = "GitLab EC2 Public IP"
+  value       = module.gitlab.public_ip
+}
+
+output "rds_endpoint" {
+  description = "RDS endpoint"
+  value       = module.rds.endpoint
+}
+
+output "rds_port" {
+  description = "RDS port"
+  value       = module.rds.port
+}
+
+output "db_subnet_group_name" {
+  description = "RDS DB subnet group name"
+  value       = module.rds.db_subnet_group_name
 }

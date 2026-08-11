@@ -1,5 +1,7 @@
 package com.devflow.auth.controller;
 
+import com.devflow.auth.dto.LoginRequest;
+import com.devflow.auth.dto.LoginResponse;
 import com.devflow.auth.dto.SignupRequest;
 import com.devflow.auth.dto.SignupResponse;
 import com.devflow.auth.service.AuthService;
@@ -21,7 +23,6 @@ public class AuthController {
     public ResponseEntity<ApiResponse<SignupResponse>> signup(
             @Valid @RequestBody SignupRequest request
     ) {
-
         SignupResponse response = authService.signup(request);
 
         return ResponseEntity
@@ -32,5 +33,19 @@ public class AuthController {
                                 response
                         )
                 );
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+        LoginResponse response = authService.login(request);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "로그인에 성공했습니다.",
+                        response
+                )
+        );
     }
 }

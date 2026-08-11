@@ -1,21 +1,23 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { login } from '../api/authApi'
 import { Eye, EyeOff, X } from 'lucide-react'
 import './Auth.css'
 
 function LoginPage() {
+  const navigate = useNavigate()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-
   const [showPassword, setShowPassword] = useState(false)
-
   const [errorMessage, setErrorMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const isFormValid =
     email.trim() !== '' &&
     password !== ''
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     if (!isFormValid) {
@@ -23,8 +25,32 @@ function LoginPage() {
     }
 
     setErrorMessage('')
+    setIsLoading(true)
 
-    // TODO: 로그인 API 연동
+    try {
+      const response = await login({
+        email: email.trim(),
+        password,
+      })
+
+      const { accessToken, tokenType } = response.data.data
+
+      localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('tokenType', tokenType)
+
+      navigate('/projects')
+    } catch (error) {
+      const errorCode = error.response?.data?.code
+      const message = error.response?.data?.message
+
+      console.log(errorCode, message)
+
+      setErrorMessage(
+        message ?? '요청 처리 중 오류가 발생했습니다.'
+      )
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -100,9 +126,9 @@ function LoginPage() {
           <button
             className="auth-button"
             type="submit"
-            disabled={!isFormValid}
+            disabled={!isFormValid || isLoading}
           >
-            로그인
+            {isLoading ? '로그인 중...' : '로그인'}
           </button>
         </form>
 
