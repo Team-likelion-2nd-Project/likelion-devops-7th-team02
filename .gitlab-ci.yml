@@ -1,0 +1,57 @@
+stages:
+  - build
+  - test
+  - image  
+
+frontend-build:
+  stage: build
+  image: node:22-alpine
+  before_script:
+    - cd frontend
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/dist/
+    expire_in: 1 day
+
+backend-test:
+  stage: test
+  image: gradle:8.14-jdk21
+  before_script:
+    - cd backend
+    - chmod +x gradlew
+  script:
+    - ./gradlew test --no-daemon
+
+backend-build:
+  stage: build
+  image: gradle:8.14-jdk21
+  before_script:
+    - cd backend
+    - chmod +x gradlew
+  script:
+    - ./gradlew clean bootJar -x test --no-daemon
+  artifacts:
+    paths:
+      - backend/build/libs/*.jar
+    expire_in: 1 day
+
+frontend-image:
+  stage: image
+  image: docker:latest
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA" ./frontend
+    - docker push "$CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA"
+
+backend-image:
+  stage: image
+  image: docker:latest
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA" ./backend
+    - docker push "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA"
