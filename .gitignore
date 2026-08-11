@@ -30,7 +30,6 @@ target/
 *.jar
 !gradle-wrapper.jar
 *.war
-application-local.yml
 application-secret.yml
 
 # ── Python ────────────────────────────────────
