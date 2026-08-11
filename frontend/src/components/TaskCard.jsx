@@ -1,126 +1,125 @@
 import { useState } from 'react'
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  UserRound,
+} from 'lucide-react'
+import TaskEditModal from './TaskEditModal'
+import ConfirmModal from './ConfirmModal'
 import './TaskCard.css'
 
 function TaskCard({
   task,
   members,
+  isMenuOpen,
+  onMenuToggle,
+  onMenuClose,
   onTitleChange,
   onStatusChange,
   onAssigneeChange,
   onDelete,
 }) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [editTitle, setEditTitle] = useState(task.title)
 
-  const handleSave = () => {
-    if (editTitle.trim() === '') return
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
-    onTitleChange(task.id, editTitle.trim())
-    setIsEditing(false)
+  const handleEdit = () => {
+    onMenuClose()
+    setIsEditOpen(true)
   }
 
-  const handleCancel = () => {
-    setEditTitle(task.title)
-    setIsEditing(false)
+  const handleDelete = () => {
+    onMenuClose()
+    setIsDeleteOpen(true)
+  }
+
+  const handleEditSave = ({
+    title,
+    status,
+    assignee,
+  }) => {
+    onTitleChange(task.id, title)
+    onStatusChange(task.id, status)
+    onAssigneeChange(task.id, assignee)
+  }
+
+  const handleDeleteConfirm = () => {
+    onDelete(task.id)
+    setIsDeleteOpen(false)
   }
 
   return (
-    <div className="task-card">
-      {isEditing ? (
-        <div className="task-edit-area">
-          <input
-            type="text"
-            className="task-edit-input"
-            value={editTitle}
-            onChange={(event) => setEditTitle(event.target.value)}
-          />
-
-          <div className="task-edit-actions">
-            <button
-              type="button"
-              className="task-edit-cancel"
-              onClick={handleCancel}
-            >
-              취소
-            </button>
-
-            <button
-              type="button"
-              className="task-edit-save"
-              onClick={handleSave}
-              disabled={editTitle.trim() === ''}
-            >
-              저장
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="task-card-title">
+    <>
+      <article className="task-card">
+        <div className="task-card-header">
           <h3>{task.title}</h3>
 
-          <button
-            type="button"
-            className="task-edit-button"
-            onClick={() => setIsEditing(true)}
-          >
-            수정
-          </button>
-        </div>
-      )}
-
-      <div className="task-card-field">
-        <label>상태</label>
-
-        <select
-          value={task.status}
-          onChange={(event) =>
-            onStatusChange(task.id, event.target.value)
-          }
-        >
-          <option value="TODO">To Do</option>
-          <option value="IN_PROGRESS">In Progress</option>
-          <option value="DONE">Done</option>
-        </select>
-      </div>
-
-      <div className="task-card-field">
-        <label>담당자</label>
-
-        <select
-          value={
-            task.assignee === '담당자 없음'
-              ? ''
-              : task.assignee
-          }
-          onChange={(event) =>
-            onAssigneeChange(task.id, event.target.value)
-          }
-        >
-          <option value="">담당자 없음</option>
-
-          {members.map((member) => (
-            <option
-              key={member.id}
-              value={member.name}
+          <div className="task-card-menu-wrapper">
+            <button
+              type="button"
+              className="task-card-menu-button"
+              aria-label="작업 메뉴"
+              onClick={onMenuToggle}
             >
-              {member.name}
-            </option>
-          ))}
-        </select>
-      </div>
+              <MoreHorizontal size={18} />
+            </button>
 
-      <div className="task-card-footer">
-        <span>{task.assignee}</span>
+            {isMenuOpen && (
+              <div className="task-card-menu">
+                <button
+                  type="button"
+                  onClick={handleEdit}
+                >
+                  <Pencil size={15} />
+                  수정
+                </button>
 
-        <button
-          type="button"
-          className="task-delete-button"
-          onClick={() => onDelete(task.id)}
-        >
-          삭제
-        </button>
-      </div>
-    </div>
+                <button
+                  type="button"
+                  className="task-card-menu-delete"
+                  onClick={handleDelete}
+                >
+                  <Trash2 size={15} />
+                  삭제
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="task-card-footer">
+          <div className="task-card-assignee">
+            <div className="task-card-avatar">
+              {task.assignee === '담당자 없음' ? (
+                <UserRound size={14} />
+              ) : (
+                task.assignee.charAt(0)
+              )}
+            </div>
+
+            <span>{task.assignee}</span>
+          </div>
+        </div>
+      </article>
+
+      <TaskEditModal
+        isOpen={isEditOpen}
+        task={task}
+        members={members}
+        onSave={handleEditSave}
+        onClose={() => setIsEditOpen(false)}
+      />
+
+      <ConfirmModal
+        isOpen={isDeleteOpen}
+        title="작업 삭제"
+        message={`"${task.title}" 작업을 삭제하시겠습니까?`}
+        confirmText="삭제"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setIsDeleteOpen(false)}
+      />
+    </>
   )
 }
 
