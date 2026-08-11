@@ -43,6 +43,11 @@ resource "aws_instance" "gitlab" {
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [var.security_group_id]
   iam_instance_profile   = aws_iam_instance_profile.gitlab.name
+  user_data = templatefile("${path.module}/user_data.sh.tpl",
+    {
+      gitlab_hostname = var.gitlab_hostname
+  })
+
 
   root_block_device {
     volume_size = var.root_volume_size
