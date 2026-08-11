@@ -14,10 +14,46 @@
   font-size: 15px;
 }
 
+.task-card-field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.task-card-field label {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.task-card-field select {
+  width: 100%;
+  padding: 8px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+
+  background-color: #ffffff;
+  color: #374151;
+}
+
 .task-card-footer {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 
   color: #6b7280;
   font-size: 13px;
+}
+
+.task-delete-button {
+  padding: 6px 10px;
+
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+
+  background-color: #ffffff;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
 }

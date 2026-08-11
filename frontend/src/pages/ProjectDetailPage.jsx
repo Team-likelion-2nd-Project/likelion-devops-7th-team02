@@ -75,6 +75,35 @@ function ProjectDetailPage() {
     closeTaskCreateForm()
   }
 
+  const handleTaskStatusChange = (taskId, status) => {
+    setTaskList((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === taskId
+          ? { ...task, status }
+          : task
+      )
+    )
+  }
+
+  const handleTaskAssigneeChange = (taskId, assignee) => {
+    setTaskList((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              assignee: assignee || '담당자 없음',
+            }
+          : task
+      )
+    )
+  }
+
+  const handleDeleteTask = (taskId) => {
+    setTaskList((prevTasks) =>
+      prevTasks.filter((task) => task.id !== taskId)
+    )
+  }
+
   if (!project) {
     return (
       <div className="project-detail-page">
@@ -237,6 +266,10 @@ function ProjectDetailPage() {
                   <TaskCard
                     key={task.id}
                     task={task}
+                    members={memberList}
+                    onStatusChange={handleTaskStatusChange}
+                    onAssigneeChange={handleTaskAssigneeChange}
+                    onDelete={handleDeleteTask}
                   />
                 ))}
               </div>
@@ -253,6 +286,10 @@ function ProjectDetailPage() {
                   <TaskCard
                     key={task.id}
                     task={task}
+                    members={memberList}
+                    onStatusChange={handleTaskStatusChange}
+                    onAssigneeChange={handleTaskAssigneeChange}
+                    onDelete={handleDeleteTask}
                   />
                 ))}
               </div>
@@ -269,7 +306,11 @@ function ProjectDetailPage() {
                   <TaskCard
                     key={task.id}
                     task={task}
-                  />
+                    members={memberList}
+                    onStatusChange={handleTaskStatusChange}
+                    onAssigneeChange={handleTaskAssigneeChange}
+                    onDelete={handleDeleteTask}
+                    />
                 ))}
               </div>
             </div>
