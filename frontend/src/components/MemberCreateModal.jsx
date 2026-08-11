@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+
 import './MemberCreateModal.css'
 
 function MemberCreateModal({
@@ -7,16 +9,17 @@ function MemberCreateModal({
   onCreate,
   onClose,
 }) {
-  const [name, setName] = useState('')
-  const [role, setRole] = useState('Frontend')
+  const [email, setEmail] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   if (!isOpen) return null
 
-  const isFormValid = name.trim() !== ''
+  const isFormValid = email.trim() !== ''
 
   const resetForm = () => {
-    setName('')
-    setRole('Frontend')
+    setEmail('')
+    setError('')
   }
 
   const closeModal = () => {
@@ -24,18 +27,29 @@ function MemberCreateModal({
     onClose()
   }
 
-  const handleCreate = () => {
-    if (!isFormValid) return
+  const handleCreate = async () => {
+    if (!isFormValid || isSubmitting) return
 
-    onCreate({
-      name: name.trim(),
-      role,
-    })
+    try {
+      setIsSubmitting(true)
+      setError('')
 
-    closeModal()
+      await onCreate({
+        email: email.trim(),
+      })
+
+      closeModal()
+    } catch (error) {
+      setError(
+        error.response?.data?.message ??
+          '멤버 추가에 실패했습니다.'
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  return (
+  return createPortal(
     <div
       className="member-modal-overlay"
       onMouseDown={closeModal}
@@ -44,10 +58,14 @@ function MemberCreateModal({
         className="member-modal"
         onMouseDown={(event) => event.stopPropagation()}
       >
+        {/* Header */}
         <div className="member-modal-header">
           <div>
             <h2>멤버 추가</h2>
-            <p>프로젝트에 참여할 멤버 정보를 입력하세요.</p>
+
+            <p>
+              프로젝트에 추가할 사용자의 이메일을 입력하세요.
+            </p>
           </div>
 
           <button
@@ -60,37 +78,35 @@ function MemberCreateModal({
           </button>
         </div>
 
+        {/* Email */}
         <div className="member-modal-field">
-          <label htmlFor="member-name">
-            이름
+          <label htmlFor="member-email">
+            이메일
           </label>
 
           <input
-            id="member-name"
-            type="text"
-            placeholder="멤버 이름을 입력하세요."
-            value={name}
-            onChange={(event) => setName(event.target.value)}
+            id="member-email"
+            type="email"
+            autoComplete="email"
+            placeholder="user@example.com"
+            value={email}
+            onChange={(event) =>
+              setEmail(event.target.value)
+            }
           />
         </div>
 
-        <div className="member-modal-field">
-          <label htmlFor="member-role">
-            역할
-          </label>
-
-          <select
-            id="member-role"
-            value={role}
-            onChange={(event) => setRole(event.target.value)}
+        {/* Error */}
+        {error && (
+          <p
+            className="member-modal-error"
+            role="alert"
           >
-            <option value="Frontend">Frontend</option>
-            <option value="Backend">Backend</option>
-            <option value="Infra">Infra</option>
-            <option value="CI/CD">CI/CD</option>
-          </select>
-        </div>
+            {error}
+          </p>
+        )}
 
+        {/* Actions */}
         <div className="member-modal-actions">
           <button
             type="button"
@@ -103,14 +119,17 @@ function MemberCreateModal({
           <button
             type="button"
             className="member-modal-submit"
-            disabled={!isFormValid}
+            disabled={!isFormValid || isSubmitting}
             onClick={handleCreate}
           >
-            멤버 추가
+            {isSubmitting
+              ? '추가 중...'
+              : '멤버 추가'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

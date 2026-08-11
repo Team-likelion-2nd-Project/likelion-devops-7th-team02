@@ -83,6 +83,7 @@
 }
 
 .task-modal-field input,
+.task-modal-field textarea,
 .task-modal-field select {
   width: 100%;
   padding: 11px 12px;
@@ -97,6 +98,7 @@
 }
 
 .task-modal-field input:focus,
+.task-modal-field textarea:focus,
 .task-modal-field select:focus {
   border-color: #2563eb;
   outline: 2px solid #dbeafe;
@@ -141,4 +143,14 @@
   color: #9ca3af;
 
   cursor: not-allowed;
+}
+
+.task-modal-field textarea {
+  resize: none;
+}
+
+.task-modal-error {
+  margin: 4px 0 0;
+  color: #dc2626;
+  font-size: 13px;
 }

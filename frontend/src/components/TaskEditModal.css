@@ -136,3 +136,10 @@
   color: #9ca3af;
   cursor: not-allowed;
 }
+
+.task-edit-modal-error {
+  margin: 4px 0 0;
+
+  color: #dc2626;
+  font-size: 13px;
+}

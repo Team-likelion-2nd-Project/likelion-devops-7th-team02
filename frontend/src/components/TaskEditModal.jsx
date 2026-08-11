@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+
 import './TaskEditModal.css'
 
 function TaskEditModal({
@@ -8,29 +10,44 @@ function TaskEditModal({
   onSave,
   onClose,
 }) {
-  const [title, setTitle] = useState('')
-  const [status, setStatus] = useState('TODO')
-  const [assignee, setAssignee] = useState(
-    task.assignee === '담당자 없음'
-      ? ''
-      : task.assignee
+  const [title, setTitle] = useState(task.title)
+  const [status, setStatus] = useState(task.status)
+  const [assigneeId, setAssigneeId] = useState(
+    task.assigneeId ?? ''
   )
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const isFormValid = title.trim() !== ''
 
-  const handleSave = () => {
-    if (!isFormValid) return
+  const handleSave = async () => {
+    if (!isFormValid || isSubmitting) return
 
-    onSave({
-      title: title.trim(),
-      status,
-      assignee,
-    })
+    try {
+      setIsSubmitting(true)
+      setError('')
 
-    onClose()
+      await onSave({
+        title: title.trim(),
+        status,
+        assigneeId:
+          assigneeId === ''
+            ? null
+            : Number(assigneeId),
+      })
+
+      onClose()
+    } catch (error) {
+      setError(
+        error.response?.data?.message ??
+          '작업 수정에 실패했습니다.'
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  return (
+  return createPortal(
     <div
       className="task-edit-modal-overlay"
       onMouseDown={onClose}
@@ -39,6 +56,7 @@ function TaskEditModal({
         className="task-edit-modal"
         onMouseDown={(event) => event.stopPropagation()}
       >
+        {/* Header */}
         <div className="task-edit-modal-header">
           <div>
             <h2>작업 수정</h2>
@@ -55,6 +73,7 @@ function TaskEditModal({
           </button>
         </div>
 
+        {/* Task Title */}
         <div className="task-edit-modal-field">
           <label htmlFor="edit-task-title">
             작업 제목
@@ -63,6 +82,7 @@ function TaskEditModal({
           <input
             id="edit-task-title"
             type="text"
+            maxLength={100}
             value={title}
             onChange={(event) =>
               setTitle(event.target.value)
@@ -70,6 +90,7 @@ function TaskEditModal({
           />
         </div>
 
+        {/* Status */}
         <div className="task-edit-modal-field">
           <label htmlFor="edit-task-status">
             상태
@@ -82,14 +103,21 @@ function TaskEditModal({
               setStatus(event.target.value)
             }
           >
-            <option value="TODO">To Do</option>
+            <option value="TODO">
+              To Do
+            </option>
+
             <option value="IN_PROGRESS">
               In Progress
             </option>
-            <option value="DONE">Done</option>
+
+            <option value="DONE">
+              Done
+            </option>
           </select>
         </div>
 
+        {/* Assignee */}
         <div className="task-edit-modal-field">
           <label htmlFor="edit-task-assignee">
             담당자
@@ -97,17 +125,22 @@ function TaskEditModal({
 
           <select
             id="edit-task-assignee"
-            value={assignee}
+            value={assigneeId}
             onChange={(event) =>
-              setAssignee(event.target.value)
+              setAssigneeId(event.target.value)
             }
           >
-            <option value="">담당자 없음</option>
+            <option
+              value=""
+              disabled
+            >
+              담당자를 선택하세요
+            </option>
 
             {members.map((member) => (
               <option
-                key={member.id}
-                value={member.name}
+                key={member.memberId}
+                value={member.userId}
               >
                 {member.name}
               </option>
@@ -115,6 +148,17 @@ function TaskEditModal({
           </select>
         </div>
 
+        {/* Error */}
+        {error && (
+          <p
+            className="task-edit-modal-error"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+
+        {/* Actions */}
         <div className="task-edit-modal-actions">
           <button
             type="button"
@@ -127,14 +171,17 @@ function TaskEditModal({
           <button
             type="button"
             className="task-edit-modal-submit"
-            disabled={!isFormValid}
+            disabled={!isFormValid || isSubmitting}
             onClick={handleSave}
           >
-            저장
+            {isSubmitting
+              ? '저장 중...'
+              : '저장'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
