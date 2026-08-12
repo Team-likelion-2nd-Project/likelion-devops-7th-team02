@@ -30,9 +30,8 @@ variable "gitlab_ami_id" {
 variable "gitlab_hostname" {
   description = "Gitlab external hostname"
   type        = string
-  default     = "git_admin"
+  default     = "team02-gitlab.manoit.co.kr"
 }
-
 
 variable "db_name" {
   description = "DB name"
@@ -80,4 +79,10 @@ variable "node_instance_type" {
   description = "Node Instance Type"
   type        = string
   default     = "t3.medium"
+}
+
+variable "certificate_arn" {
+  description = "ACM arn"
+  type        = string
+  sensitive   = true
 }

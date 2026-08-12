@@ -29,6 +29,14 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description = "Registry port from internet"
+    from_port   = 5050
+    to_port     = 5050
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     description = "Allow all outbound traffic"
     from_port   = 0
@@ -44,32 +52,32 @@ resource "aws_security_group" "alb" {
 
 resource "aws_security_group" "gitlab" {
   name        = "${var.project_name}-${var.environment}-gitlab-sg"
-  description = "Security group for GitLab EC2"
+  description = "Security group for GitLab EC2 via ALB"
   vpc_id      = var.vpc_id
 
   ingress {
-    description = "HTTP from internet"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    description = "HTTPS from internet"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "HTTP from ALB"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
   }
 
   ingress {
-    description = "HTTPS from internet"
+    description = "SSH from internet (for debugging)"
     from_port   = 2222
     to_port     = 2222
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description     = "Registry from EKS nodes only"
+    from_port       = 5050
+    to_port         = 5050
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
 
   egress {
     description = "Allow all outbound traffic"

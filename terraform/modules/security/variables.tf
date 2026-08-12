@@ -25,14 +25,4 @@ variable "eks_cluster_name" {
   default     = ""
 }
 
-variable "gitlab_vpc_security_group_id" {
-  description = "GitLab VPC Security Group ID (if externally managed)"
-  type        = string
-  default     = ""
-}
 
-variable "rds_vpc_security_group_id" {
-  description = "RDS VPC Security Group ID (if externally managed)"
-  type        = string
-  default     = ""
-}
