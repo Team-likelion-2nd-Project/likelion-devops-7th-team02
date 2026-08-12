@@ -1,8 +1,8 @@
 stages:
   - build
   - test
-  - image 
-  - verify 
+  - image
+  - verify
 
 frontend-build:
   stage: build
