@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   Bell,
   ChevronDown,
+  LogIn,
   LogOut,
   Search,
   Settings,
@@ -18,6 +19,15 @@ function Header() {
 
   const [isProfileOpen, setIsProfileOpen] = useState(false)
 
+  const accessToken = localStorage.getItem('accessToken')
+  const hasToken = Boolean(accessToken)
+  const isLoggedIn = Boolean(hasToken && currentUser)
+
+  const handleLogin = () => {
+    setIsProfileOpen(false)
+    navigate('/login')
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('accessToken')
     localStorage.removeItem('tokenType')
@@ -31,7 +41,7 @@ function Header() {
       {/* Logo */}
       <div className="main-header-left">
         <Link
-          to="/projects"
+          to={hasToken ? '/projects' : '/login'}
           className="main-header-logo"
         >
           <div className="main-header-logo-icon">
@@ -81,16 +91,24 @@ function Header() {
             }
           >
             <div className="main-header-avatar">
-              {currentUser?.name?.charAt(0) ?? 'U'}
+              {isLoggedIn
+                ? currentUser.name.charAt(0)
+                : 'U'}
             </div>
 
             <div className="main-header-user-info">
               <strong>
-                {currentUser?.name ?? '사용자'}
+                {!hasToken
+                  ? '로그인이 필요합니다'
+                  : currentUser
+                    ? currentUser.name
+                    : '사용자 정보 확인 중...'}
               </strong>
 
               <span>
-                {currentUser?.email ?? ''}
+                {isLoggedIn
+                  ? currentUser.email
+                  : ''}
               </span>
             </div>
 
@@ -101,30 +119,47 @@ function Header() {
             <div className="profile-menu">
               <div className="profile-menu-user">
                 <div className="profile-menu-avatar">
-                  {currentUser?.name?.charAt(0) ?? 'U'}
+                  {isLoggedIn
+                    ? currentUser.name.charAt(0)
+                    : 'U'}
                 </div>
 
                 <div>
                   <strong>
-                    {currentUser?.name ?? '사용자'}
+                    {isLoggedIn
+                      ? currentUser.name
+                      : '로그인이 필요합니다'}
                   </strong>
 
                   <span>
-                    {currentUser?.email ?? ''}
+                    {isLoggedIn
+                      ? currentUser.email
+                      : '로그인 후 이용해주세요.'}
                   </span>
                 </div>
               </div>
 
               <div className="profile-menu-divider" />
 
-              <button
-                type="button"
-                className="profile-menu-logout"
-                onClick={handleLogout}
-              >
-                <LogOut size={17} />
-                로그아웃
-              </button>
+              {isLoggedIn ? (
+                <button
+                  type="button"
+                  className="profile-menu-logout"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={17} />
+                  로그아웃
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="profile-menu-login"
+                  onClick={handleLogin}
+                >
+                  <LogIn size={17} />
+                  로그인
+                </button>
+              )}
             </div>
           )}
         </div>

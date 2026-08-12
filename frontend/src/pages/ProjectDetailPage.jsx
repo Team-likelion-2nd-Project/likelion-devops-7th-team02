@@ -16,7 +16,9 @@ import {
   updateTaskStatus,
   updateTaskAssignee,
 } from '../api/taskApi'
+import { getHealth } from '../api/healthApi'
 import './ProjectDetailPage.css'
+
 
 function ProjectDetailPage() {
   const { projectId } = useParams()
@@ -59,6 +61,12 @@ function ProjectDetailContent({ projectId }) {
   const [taskList, setTaskList] = useState([])
   const [isTaskLoading, setIsTaskLoading] = useState(true)
   const [taskError, setTaskError] = useState('')
+
+    // Health
+  const [healthStatus, setHealthStatus] = useState(null)
+  const [healthHttpStatus, setHealthHttpStatus] = useState(null)
+  const [isHealthLoading, setIsHealthLoading] = useState(true)
+  const [healthError, setHealthError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -119,6 +127,38 @@ function ProjectDetailContent({ projectId }) {
       cancelled = true
     }
   }, [projectId])
+
+    useEffect(() => {
+      let cancelled = false
+
+      getHealth()
+        .then((response) => {
+          if (cancelled) return
+
+          setHealthStatus(
+            response.data?.status ?? 'UNKNOWN'
+          )
+          setHealthHttpStatus(response.status)
+          setHealthError('')
+          setIsHealthLoading(false)
+        })
+        .catch((error) => {
+          if (cancelled) return
+
+          setHealthStatus('DOWN')
+          setHealthHttpStatus(
+            error.response?.status ?? null
+          )
+          setHealthError(
+            'Backend Health Check에 실패했습니다.'
+          )
+          setIsHealthLoading(false)
+        })
+
+      return () => {
+        cancelled = true
+      }
+    }, [])
 
   const [openTaskMenuId, setOpenTaskMenuId] = useState(null)
 
@@ -267,6 +307,9 @@ function ProjectDetailContent({ projectId }) {
   const doneTasks = taskList.filter(
     (task) => task.status === 'DONE'
   )
+
+    const isBackendHealthy =
+    healthStatus === 'UP'
 
   return (
     <div className="project-detail-page">
@@ -432,15 +475,35 @@ function ProjectDetailContent({ projectId }) {
               <div className="health-summary-item">
                 <span>API Server</span>
 
-                <div className="health-status healthy">
+                <div
+                  className={`health-status ${
+                    isBackendHealthy ? 'healthy' : ''
+                  }`}
+                >
                   <span className="health-dot" />
-                  정상
+
+                  {isHealthLoading
+                    ? '확인 중'
+                    : isBackendHealthy
+                      ? '정상'
+                      : '오류'}
                 </div>
               </div>
 
               <div className="health-summary-item">
                 <span>응답 상태</span>
-                <strong>200 OK</strong>
+
+                <strong>
+                  {isHealthLoading
+                    ? '확인 중'
+                    : healthHttpStatus
+                      ? `${healthHttpStatus} ${
+                          healthHttpStatus === 200
+                            ? 'OK'
+                            : 'ERROR'
+                        }`
+                      : '연결 실패'}
+                </strong>
               </div>
 
               <div className="health-summary-item">
@@ -448,6 +511,14 @@ function ProjectDetailContent({ projectId }) {
                 <strong>Development</strong>
               </div>
             </div>
+
+            {healthError && (
+              <p className="project-section-empty">
+                {healthError}
+              </p>
+            )}
+
+
           </section>
         </div>
 
@@ -537,8 +608,17 @@ function ProjectDetailContent({ projectId }) {
                 <span>Backend</span>
 
                 <div className="service-status-value">
-                  <span className="service-dot healthy" />
-                  정상
+                  <span
+                    className={`service-dot ${
+                      isBackendHealthy ? 'healthy' : ''
+                    }`}
+                  />
+
+                  {isHealthLoading
+                    ? '확인 중'
+                    : isBackendHealthy
+                      ? '정상'
+                      : '오류'}
                 </div>
               </div>
 
