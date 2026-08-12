@@ -33,7 +33,6 @@ variable "gitlab_hostname" {
   default     = "team02-gitlab.manoit.co.kr"
 }
 
-
 variable "db_name" {
   description = "DB name"
   type        = string

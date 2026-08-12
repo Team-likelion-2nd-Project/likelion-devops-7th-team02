@@ -1,0 +1,279 @@
+.main-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+
+  display: grid;
+  grid-template-columns: auto minmax(240px, 520px) auto;
+  align-items: center;
+  gap: 32px;
+
+  width: 100%;
+  height: 64px;
+  padding: 0 24px;
+
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #ffffff;
+}
+
+/* Left */
+.main-header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.main-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  color: #111827;
+  font-size: 18px;
+}
+
+.main-header-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+
+  border-radius: 8px;
+  background-color: #2563eb;
+
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Search */
+.main-header-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  width: 100%;
+  padding: 9px 12px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
+  background-color: #f9fafb;
+  color: #9ca3af;
+}
+
+.main-header-search input {
+  width: 100%;
+
+  border: none;
+  outline: none;
+
+  background-color: transparent;
+  color: #111827;
+
+  font-size: 14px;
+}
+
+.main-header-search input::placeholder {
+  color: #9ca3af;
+}
+
+/* Right Actions */
+.main-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.main-header-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+
+  border: none;
+  border-radius: 8px;
+
+  background-color: transparent;
+  color: #6b7280;
+}
+
+.main-header-icon-button:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+/* Profile */
+.main-header-profile {
+  position: relative;
+}
+
+.main-header-profile-button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 5px 8px;
+
+  border: none;
+  border-radius: 8px;
+
+  background-color: transparent;
+  color: #374151;
+}
+
+.main-header-profile-button:hover {
+  background-color: #f3f4f6;
+}
+
+.main-header-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+
+  border-radius: 50%;
+  background-color: #dbeafe;
+
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.main-header-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.main-header-user-info strong {
+  color: #111827;
+  font-size: 13px;
+}
+
+.main-header-user-info span {
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+/* Profile Dropdown */
+.profile-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 200;
+
+  width: 220px;
+  padding: 10px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+
+  background-color: #ffffff;
+
+  box-shadow:
+    0 10px 30px rgba(15, 23, 42, 0.12);
+}
+
+.profile-menu-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 10px;
+}
+
+.profile-menu-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 40px;
+  height: 40px;
+
+  border-radius: 50%;
+  background-color: #dbeafe;
+
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.profile-menu-user > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-menu-user strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+.profile-menu-user span {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.profile-menu-divider {
+  height: 1px;
+  margin: 6px 0;
+
+  background-color: #e5e7eb;
+}
+
+.profile-menu-logout,
+.profile-menu-login {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  width: 100%;
+  padding: 10px;
+
+  border: none;
+  border-radius: 8px;
+
+  background-color: transparent;
+  color: #dc2626;
+
+  font-size: 13px;
+  text-align: left;
+}
+
+.profile-menu-logout:hover {
+  background-color: #fef2f2;
+}
+
+/* Responsive */
+@media (max-width: 1000px) {
+  .main-header {
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+  }
+
+  .main-header-project,
+  .main-header-user-info {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .main-header {
+    grid-template-columns: auto auto;
+  }
+
+  .main-header-search {
+    display: none;
+  }
+
+  .main-header-actions {
+    justify-self: end;
+  }
+}

@@ -1,88 +1,232 @@
-import { useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { projects } from '../mocks/projects'
+import ProjectContext from '../context/ProjectContext'
 import TaskCard from '../components/TaskCard'
+import TaskCreateModal from '../components/TaskCreateModal'
+import MemberCreateModal from '../components/MemberCreateModal'
+import Loading from '../components/Loading'
+import ErrorMessage from '../components/ErrorMessage'
+import {
+  addMember,
+  getMembers,
+} from '../api/memberApi'
+import {
+  createTask,
+  getTasks,
+  updateTaskStatus,
+  updateTaskAssignee,
+} from '../api/taskApi'
+import { getHealth } from '../api/healthApi'
 import './ProjectDetailPage.css'
+
 
 function ProjectDetailPage() {
   const { projectId } = useParams()
 
-  const project = projects.find(
+  return (
+    <ProjectDetailContent
+      key={projectId}
+      projectId={projectId}
+    />
+  )
+}
+
+function normalizeTask(task) {
+  return {
+    ...task,
+    assignee:
+      task.assigneeName ?? '담당자 없음',
+  }
+}
+
+function ProjectDetailContent({ projectId }) {
+  const {
+    projectList,
+    isLoading: isProjectLoading,
+    error: projectError,
+  } = useContext(ProjectContext)
+
+  const project = projectList.find(
     (project) => project.id === Number(projectId)
   )
 
   // Member
-  const [memberList, setMemberList] = useState(project?.members ?? [])
+  const [memberList, setMemberList] = useState([])
   const [isMemberCreateOpen, setIsMemberCreateOpen] = useState(false)
-  const [memberName, setMemberName] = useState('')
-  const [memberRole, setMemberRole] = useState('Frontend')
+  const [isMemberLoading, setIsMemberLoading] = useState(true)
+  const [memberError, setMemberError] = useState('')
 
   // Task
   const [isTaskCreateOpen, setIsTaskCreateOpen] = useState(false)
-  const [taskTitle, setTaskTitle] = useState('')
-  const [taskStatus, setTaskStatus] = useState('TODO')
-  const [taskAssignee, setTaskAssignee] = useState('')
-  const [taskList, setTaskList] = useState(project?.tasks ?? [])
+  const [taskList, setTaskList] = useState([])
+  const [isTaskLoading, setIsTaskLoading] = useState(true)
+  const [taskError, setTaskError] = useState('')
 
-  const isMemberFormValid = memberName.trim() !== ''
-  const isTaskFormValid = taskTitle.trim() !== ''
+    // Health
+  const [healthStatus, setHealthStatus] = useState(null)
+  const [healthHttpStatus, setHealthHttpStatus] = useState(null)
+  const [isHealthLoading, setIsHealthLoading] = useState(true)
+  const [healthError, setHealthError] = useState('')
 
-  const closeMemberCreateForm = () => {
-    setIsMemberCreateOpen(false)
-    setMemberName('')
-    setMemberRole('Frontend')
-  }
+  useEffect(() => {
+    let cancelled = false
 
-  const handleCreateMember = () => {
-    if (!isMemberFormValid) return
+    getMembers(projectId)
+      .then((response) => {
+        if (cancelled) return
 
-    const newMember = {
-      id: Date.now(),
-      name: memberName.trim(),
-      role: memberRole,
+        setMemberList(response.data.data ?? [])
+      })
+      .catch((error) => {
+        if (cancelled) return
+
+        setMemberError(
+          error.response?.data?.message ??
+            '프로젝트 멤버를 불러오지 못했습니다.'
+        )
+      })
+      .finally(() => {
+        if (cancelled) return
+
+        setIsMemberLoading(false)
+      })
+
+    return () => {
+      cancelled = true
     }
+  }, [projectId])
+
+  useEffect(() => {
+    let cancelled = false
+
+    getTasks(projectId)
+      .then((response) => {
+        if (cancelled) return
+
+        const tasks = response.data.data ?? []
+
+        setTaskList(
+          tasks.map(normalizeTask)
+        )
+      })
+      .catch((error) => {
+        if (cancelled) return
+
+        setTaskError(
+          error.response?.data?.message ??
+            '작업 목록을 불러오지 못했습니다.'
+        )
+      })
+      .finally(() => {
+        if (cancelled) return
+
+        setIsTaskLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [projectId])
+
+    useEffect(() => {
+      let cancelled = false
+
+      getHealth()
+        .then((response) => {
+          if (cancelled) return
+
+          setHealthStatus(
+            response.data?.status ?? 'UNKNOWN'
+          )
+          setHealthHttpStatus(response.status)
+          setHealthError('')
+          setIsHealthLoading(false)
+        })
+        .catch((error) => {
+          if (cancelled) return
+
+          setHealthStatus('DOWN')
+          setHealthHttpStatus(
+            error.response?.status ?? null
+          )
+          setHealthError(
+            'Backend Health Check에 실패했습니다.'
+          )
+          setIsHealthLoading(false)
+        })
+
+      return () => {
+        cancelled = true
+      }
+    }, [])
+
+  const [openTaskMenuId, setOpenTaskMenuId] = useState(null)
+
+  const handleCreateMember = async ({ email }) => {
+    const response = await addMember(
+      projectId,
+      { email }
+    )
+
+    const newMember = response.data.data
 
     setMemberList((prevMembers) => [
       ...prevMembers,
       newMember,
     ])
 
-    closeMemberCreateForm()
+    return newMember
   }
 
-  const closeTaskCreateForm = () => {
-    setIsTaskCreateOpen(false)
-    setTaskTitle('')
-    setTaskStatus('TODO')
-    setTaskAssignee('')
-  }
+  const handleCreateTask = async ({
+    title,
+    description,
+    assigneeId,
+  }) => {
+    const response = await createTask(
+      projectId,
+      {
+        title,
+        description,
+        assigneeId,
+      }
+    )
 
-  const handleCreateTask = () => {
-    if (!isTaskFormValid) return
-
-    const newTask = {
-      id: Date.now(),
-      title: taskTitle.trim(),
-      status: taskStatus,
-      assignee: taskAssignee || '담당자 없음',
-    }
+    const newTask = normalizeTask(
+      response.data.data
+    )
 
     setTaskList((prevTasks) => [
       ...prevTasks,
       newTask,
     ])
 
-    closeTaskCreateForm()
+    return newTask
   }
 
-  const handleTaskStatusChange = (taskId, status) => {
+  const handleTaskStatusChange = async (
+    taskId,
+    status
+  ) => {
+    const response = await updateTaskStatus(
+      projectId,
+      taskId,
+      status
+    )
+
+    const updatedTask = normalizeTask(
+      response.data.data
+    )
+
     setTaskList((prevTasks) =>
       prevTasks.map((task) =>
         task.id === taskId
-          ? { ...task, status }
+          ? updatedTask
           : task
       )
     )
+
+    return updatedTask
   }
 
   const handleTaskTitleChange = (taskId, title) => {
@@ -95,22 +239,49 @@ function ProjectDetailPage() {
     )
   }
 
-  const handleTaskAssigneeChange = (taskId, assignee) => {
+  const handleTaskAssigneeChange = async (
+    taskId,
+    assigneeId
+  ) => {
+    const response = await updateTaskAssignee(
+      projectId,
+      taskId,
+      assigneeId
+    )
+
+    const updatedTask = normalizeTask(
+      response.data.data
+    )
+
     setTaskList((prevTasks) =>
       prevTasks.map((task) =>
         task.id === taskId
-          ? {
-              ...task,
-              assignee: assignee || '담당자 없음',
-            }
+          ? updatedTask
           : task
       )
     )
-  }
 
+    return updatedTask
+  }
   const handleDeleteTask = (taskId) => {
     setTaskList((prevTasks) =>
       prevTasks.filter((task) => task.id !== taskId)
+    )
+  }
+
+  if (isProjectLoading) {
+    return (
+      <div className="project-detail-page">
+        <Loading />
+      </div>
+    )
+  }
+
+  if (projectError) {
+    return (
+      <div className="project-detail-page">
+        <ErrorMessage message={projectError} />
+      </div>
     )
   }
 
@@ -137,6 +308,9 @@ function ProjectDetailPage() {
     (task) => task.status === 'DONE'
   )
 
+    const isBackendHealthy =
+    healthStatus === 'UP'
+
   return (
     <div className="project-detail-page">
       <Link to="/projects" className="project-back-link">
@@ -150,278 +324,326 @@ function ProjectDetailPage() {
         </div>
       </div>
 
-      <div className="project-summary">
-        <div className="project-summary-card">
-          <span>멤버</span>
-          <strong>{memberList.length}명</strong>
-        </div>
-
-        <div className="project-summary-card">
-          <span>Task</span>
-          <strong>{taskList.length}개</strong>
-        </div>
-
-        <div className="project-summary-card">
-          <span>최근 업데이트</span>
-          <strong>{project.updatedAt}</strong>
-        </div>
-      </div>
-
       <div className="project-detail-content">
-        {/* Task */}
-        <section className="project-section">
-          <div className="project-section-header">
-            <h2>작업</h2>
-
-            <button
-              type="button"
-              className="task-create-button"
-              onClick={() => setIsTaskCreateOpen(true)}
-            >
-              + 작업 추가
-            </button>
-          </div>
-
-          {isTaskCreateOpen && (
-            <div className="task-create-form">
-              <div className="task-create-form-header">
-                <h3>새 작업 만들기</h3>
-
-                <button
-                  type="button"
-                  className="task-create-close"
-                  onClick={closeTaskCreateForm}
-                >
-                  ✕
-                </button>
+        <div className="project-main-column">
+          {/* Task Board */}
+          <section className="project-section project-board-section">
+            <div className="project-section-header">
+              <div>
+                <h2>작업 보드</h2>
+                <p className="project-section-description">
+                  프로젝트 작업 진행 상황을 확인하세요.
+                </p>
               </div>
 
-              <div className="task-create-field">
-                <label htmlFor="task-title">작업 제목</label>
-
-                <input
-                  id="task-title"
-                  type="text"
-                  placeholder="작업 제목을 입력하세요."
-                  value={taskTitle}
-                  onChange={(event) => setTaskTitle(event.target.value)}
-                />
-              </div>
-
-              <div className="task-create-field">
-                <label htmlFor="task-status">상태</label>
-
-                <select
-                  id="task-status"
-                  value={taskStatus}
-                  onChange={(event) => setTaskStatus(event.target.value)}
-                >
-                  <option value="TODO">To Do</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="DONE">Done</option>
-                </select>
-              </div>
-
-              <div className="task-create-field">
-                <label htmlFor="task-assignee">담당자</label>
-
-                <select
-                  id="task-assignee"
-                  value={taskAssignee}
-                  onChange={(event) => setTaskAssignee(event.target.value)}
-                >
-                  <option value="">담당자 없음</option>
-
-                  {memberList.map((member) => (
-                    <option
-                      key={member.id}
-                      value={member.name}
-                    >
-                      {member.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="task-create-actions">
-                <button
-                  type="button"
-                  className="task-create-cancel"
-                  onClick={closeTaskCreateForm}
-                >
-                  취소
-                </button>
-
-                <button
-                  type="button"
-                  className="task-create-submit"
-                  disabled={!isTaskFormValid}
-                  onClick={handleCreateTask}
-                >
-                  생성
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="task-board">
-            <div className="task-column">
-              <div className="task-column-header">
-                <h3>To Do</h3>
-                <span>{todoTasks.length}</span>
-              </div>
-
-              <div className="task-list">
-                {todoTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    members={memberList}
-                    onTitleChange={handleTaskTitleChange}
-                    onStatusChange={handleTaskStatusChange}
-                    onAssigneeChange={handleTaskAssigneeChange}
-                    onDelete={handleDeleteTask}
-                  />
-                ))}
-              </div>
+              <button
+                type="button"
+                className="task-create-button"
+                onClick={() => setIsTaskCreateOpen(true)}
+              >
+                + 작업 추가
+              </button>
             </div>
 
-            <div className="task-column">
-              <div className="task-column-header">
-                <h3>In Progress</h3>
-                <span>{inProgressTasks.length}</span>
-              </div>
+            <TaskCreateModal
+              isOpen={isTaskCreateOpen}
+              members={memberList}
+              onCreate={handleCreateTask}
+              onClose={() => setIsTaskCreateOpen(false)}
+            />
 
-              <div className="task-list">
-                {inProgressTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    members={memberList}
-                    onTitleChange={handleTaskTitleChange}
-                    onStatusChange={handleTaskStatusChange}
-                    onAssigneeChange={handleTaskAssigneeChange}
-                    onDelete={handleDeleteTask}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="task-column">
-              <div className="task-column-header">
-                <h3>Done</h3>
-                <span>{doneTasks.length}</span>
-              </div>
-
-              <div className="task-list">
-                {doneTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    members={memberList}
-                    onTitleChange={handleTaskTitleChange}
-                    onStatusChange={handleTaskStatusChange}
-                    onAssigneeChange={handleTaskAssigneeChange}
-                    onDelete={handleDeleteTask}
-                    />
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Member */}
-        <section className="project-section">
-          <div className="project-section-header">
-            <h2>멤버</h2>
-
-            <button
-              type="button"
-              className="project-member-add-button"
-              onClick={() => setIsMemberCreateOpen(true)}
-            >
-              + 멤버 추가
-            </button>
-          </div>
-
-          {isMemberCreateOpen && (
-            <div className="project-member-create-form">
-              <div className="project-member-form-field">
-                <label htmlFor="member-name">이름</label>
-
-                <input
-                  id="member-name"
-                  type="text"
-                  value={memberName}
-                  onChange={(event) => setMemberName(event.target.value)}
-                />
-              </div>
-
-              <div className="project-member-form-field">
-                <label htmlFor="member-role">역할</label>
-
-                <select
-                  id="member-role"
-                  value={memberRole}
-                  onChange={(event) => setMemberRole(event.target.value)}
-                >
-                  <option value="Frontend">Frontend</option>
-                  <option value="Backend">Backend</option>
-                  <option value="Infra">Infra</option>
-                  <option value="CI/CD">CI/CD</option>
-                </select>
-              </div>
-
-              <div className="project-member-form-actions">
-                <button
-                  type="button"
-                  className="project-member-form-cancel-button"
-                  onClick={closeMemberCreateForm}
-                >
-                  취소
-                </button>
-
-                <button
-                  type="button"
-                  className="project-member-submit-button"
-                  onClick={handleCreateMember}
-                  disabled={!isMemberFormValid}
-                >
-                  추가
-                </button>
-              </div>
-            </div>
-          )}
-
-          {memberList.length === 0 ? (
-            <p className="project-section-empty">
-              등록된 멤버가 없습니다.
-            </p>
-          ) : (
-            <div className="project-member-list">
-              {memberList.map((member) => (
-                <div
-                  key={member.id}
-                  className="project-member-item"
-                >
-                  <div>
-                    <strong>{member.name}</strong>
-                    <span>{member.role}</span>
+            {isTaskLoading ? (
+              <Loading />
+            ) : taskError ? (
+              <ErrorMessage message={taskError} />
+            ) : (
+            <div className="task-board">
+              {/* To Do */}
+              <div className="task-column">
+                <div className="task-column-header">
+                  <div className="task-column-title">
+                    <span className="task-status-dot todo" />
+                    <h3>To Do</h3>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
 
-        {/* Health */}
-        <section className="project-section">
-          <h2>서비스 상태</h2>
-          <p>Health 상태가 표시될 영역입니다.</p>
-        </section>
+                  <span>{todoTasks.length}</span>
+                </div>
+
+                <div className="task-list">
+                  {todoTasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      members={memberList}
+                      isMenuOpen={openTaskMenuId === task.id}
+                      onMenuToggle={() =>
+                        setOpenTaskMenuId((prevId) =>
+                          prevId === task.id ? null : task.id
+                        )
+                      }
+                      onMenuClose={() => setOpenTaskMenuId(null)}
+                      onTitleChange={handleTaskTitleChange}
+                      onStatusChange={handleTaskStatusChange}
+                      onAssigneeChange={handleTaskAssigneeChange}
+                      onDelete={handleDeleteTask}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* In Progress */}
+              <div className="task-column">
+                <div className="task-column-header">
+                  <div className="task-column-title">
+                    <span className="task-status-dot progress" />
+                    <h3>In Progress</h3>
+                  </div>
+
+                  <span>{inProgressTasks.length}</span>
+                </div>
+
+                <div className="task-list">
+                  {inProgressTasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      members={memberList}
+                      isMenuOpen={openTaskMenuId === task.id}
+                      onMenuToggle={() =>
+                        setOpenTaskMenuId((prevId) =>
+                          prevId === task.id ? null : task.id
+                        )
+                      }
+                      onMenuClose={() => setOpenTaskMenuId(null)}
+                      onTitleChange={handleTaskTitleChange}
+                      onStatusChange={handleTaskStatusChange}
+                      onAssigneeChange={handleTaskAssigneeChange}
+                      onDelete={handleDeleteTask}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Done */}
+              <div className="task-column">
+                <div className="task-column-header">
+                  <div className="task-column-title">
+                    <span className="task-status-dot done" />
+                    <h3>Done</h3>
+                  </div>
+
+                  <span>{doneTasks.length}</span>
+                </div>
+
+                <div className="task-list">
+                  {doneTasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      members={memberList}
+                      isMenuOpen={openTaskMenuId === task.id}
+                      onMenuToggle={() =>
+                        setOpenTaskMenuId((prevId) =>
+                          prevId === task.id ? null : task.id
+                        )
+                      }
+                      onMenuClose={() => setOpenTaskMenuId(null)}
+                      onTitleChange={handleTaskTitleChange}
+                      onStatusChange={handleTaskStatusChange}
+                      onAssigneeChange={handleTaskAssigneeChange}
+                      onDelete={handleDeleteTask}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+            )}
+          </section>
+
+          {/* Backend Health */}
+          <section className="project-section project-health">
+            <div className="project-section-header">
+              <div>
+                <h2>Backend Health</h2>
+                <p className="project-section-description">
+                  연결된 서비스 상태를 확인합니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="health-summary">
+              <div className="health-summary-item">
+                <span>API Server</span>
+
+                <div
+                  className={`health-status ${
+                    isBackendHealthy ? 'healthy' : ''
+                  }`}
+                >
+                  <span className="health-dot" />
+
+                  {isHealthLoading
+                    ? '확인 중'
+                    : isBackendHealthy
+                      ? '정상'
+                      : '오류'}
+                </div>
+              </div>
+
+              <div className="health-summary-item">
+                <span>응답 상태</span>
+
+                <strong>
+                  {isHealthLoading
+                    ? '확인 중'
+                    : healthHttpStatus
+                      ? `${healthHttpStatus} ${
+                          healthHttpStatus === 200
+                            ? 'OK'
+                            : 'ERROR'
+                        }`
+                      : '연결 실패'}
+                </strong>
+              </div>
+
+              <div className="health-summary-item">
+                <span>Environment</span>
+                <strong>Development</strong>
+              </div>
+            </div>
+
+            {healthError && (
+              <p className="project-section-empty">
+                {healthError}
+              </p>
+            )}
+
+
+          </section>
+        </div>
+
+        {/* Right Panel */}
+        <aside className="project-side-panel">
+          {/* Project Info */}
+          <section className="project-side-card">
+            <h2>프로젝트 정보</h2>
+
+            <div className="project-info-list">
+              <div className="project-info-row">
+                <span>멤버</span>
+                <strong>{memberList.length}명</strong>
+              </div>
+
+              <div className="project-info-row">
+                <span>Task</span>
+                <strong>{taskList.length}개</strong>
+              </div>
+
+              <div className="project-info-row">
+                <span>최근 업데이트</span>
+                <strong>{project.updatedAt}</strong>
+              </div>
+            </div>
+          </section>
+
+          {/* Members */}
+          <section className="project-side-card">
+            <div className="project-side-card-header">
+              <h2>멤버</h2>
+
+              <button
+                type="button"
+                className="project-member-add-button"
+                onClick={() => setIsMemberCreateOpen(true)}
+              >
+                + 추가
+              </button>
+            </div>
+
+            <MemberCreateModal
+              isOpen={isMemberCreateOpen}
+              onCreate={handleCreateMember}
+              onClose={() => setIsMemberCreateOpen(false)}
+            />
+
+            {isMemberLoading ? (
+              <p className="project-section-empty">
+                멤버를 불러오는 중입니다.
+              </p>
+            ) : memberError ? (
+              <p className="project-section-empty">
+                {memberError}
+              </p>
+            ) : memberList.length === 0 ? (
+              <p className="project-section-empty">
+                등록된 멤버가 없습니다.
+              </p>
+            ) : (
+              <div className="project-member-list">
+                {memberList.map((member) => (
+                  <div
+                    key={member.memberId}
+                    className="project-member-item"
+                  >
+                    <div className="project-member-avatar">
+                      {member.name.charAt(0)}
+                    </div>
+
+                    <div className="project-member-info">
+                      <strong>{member.name}</strong>
+                      <span>{member.role}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Service Status */}
+          <section className="project-side-card">
+            <h2>서비스 상태</h2>
+
+            <div className="service-status-list">
+              <div className="service-status-item">
+                <span>Backend</span>
+
+                <div className="service-status-value">
+                  <span
+                    className={`service-dot ${
+                      isBackendHealthy ? 'healthy' : ''
+                    }`}
+                  />
+
+                  {isHealthLoading
+                    ? '확인 중'
+                    : isBackendHealthy
+                      ? '정상'
+                      : '오류'}
+                </div>
+              </div>
+
+              <div className="service-status-item">
+                <span>Database</span>
+
+                <div className="service-status-value">
+                  <span className="service-dot healthy" />
+                  정상
+                </div>
+              </div>
+
+              <div className="service-status-item">
+                <span>Frontend</span>
+
+                <div className="service-status-value">
+                  <span className="service-dot healthy" />
+                  정상
+                </div>
+              </div>
+            </div>
+          </section>
+        </aside>
       </div>
     </div>
-  )
-}
+  )}
 
 export default ProjectDetailPage

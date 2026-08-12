@@ -36,13 +36,15 @@ module "gitlab" {
 module "gitlab-alb" {
   source = "../../modules/gitlab-alb"
 
-  project_name       = var.project_name
-  environment        = var.environment
-  vpc_id             = module.network.vpc_id
-  subnet_ids         = module.network.public_subnet_ids
-  security_group_id  = module.security.alb_security_group_id
+  project_name      = var.project_name
+  environment       = var.environment
+  vpc_id            = module.network.vpc_id
+  subnet_ids        = module.network.public_subnet_ids
+  security_group_id = module.security.alb_security_group_id
+
   gitlab_instance_id = module.gitlab.instance_id
-  certificate_arn    = var.certificate_arn
+
+  certificate_arn = var.certificate_arn
 }
 
 module "rds" {

@@ -1,135 +1,167 @@
 .task-card {
-  padding: 16px;
+  position: relative;
+  z-index: 1;
+
+  padding: 14px;
 
   border: 1px solid #e5e7eb;
   border-radius: 10px;
 
   background-color: #ffffff;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 
-.task-card h3 {
-  margin: 0 0 16px;
+.task-card:has(.task-card-menu) {
+  z-index: 20;
+}
+
+.task-card:hover {
+  border-color: #d1d5db;
+
+  box-shadow:
+    0 4px 12px rgba(15, 23, 42, 0.06);
+
+  transform: translateY(-1px);
+}
+
+.task-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.task-card-header h3 {
+  margin: 0;
 
   color: #111827;
-  font-size: 15px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+
+  word-break: break-word;
 }
 
-.task-card-field {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 12px;
+.task-card-menu-wrapper {
+  position: relative;
+
+  flex-shrink: 0;
 }
 
-.task-card-field label {
-  color: #6b7280;
-  font-size: 12px;
-}
+.task-card-menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-.task-card-field select {
-  width: 100%;
-  padding: 8px;
+  width: 28px;
+  height: 28px;
 
-  border: 1px solid #d1d5db;
+  border: none;
   border-radius: 6px;
 
+  background-color: transparent;
+  color: #6b7280;
+}
+
+.task-card-menu-button:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.task-card-menu {
+  position: absolute;
+  top: 32px;
+  right: 0;
+  z-index: 30;
+
+  width: 110px;
+
+  padding: 5px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
   background-color: #ffffff;
+
+  box-shadow:
+    0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.task-card-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  width: 100%;
+  padding: 8px 9px;
+
+  border: none;
+  border-radius: 6px;
+
+  background-color: transparent;
   color: #374151;
+
+  font-size: 13px;
+  text-align: left;
+}
+
+.task-card-menu button:hover {
+  background-color: #f3f4f6;
+}
+
+.task-card-menu .task-card-menu-delete {
+  color: #dc2626;
+}
+
+.task-card-menu .task-card-menu-delete:hover {
+  background-color: #fef2f2;
 }
 
 .task-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+
+  margin-top: 18px;
+}
+
+.task-card-assignee {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  min-width: 0;
 
   color: #6b7280;
-  font-size: 13px;
-}
-
-.task-delete-button {
-  padding: 6px 10px;
-
-  border: 1px solid #fecaca;
-  border-radius: 6px;
-
-  background-color: #ffffff;
-  color: #dc2626;
   font-size: 12px;
-  font-weight: 600;
 }
-.task-card-title {
+
+.task-card-assignee span {
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-card-avatar {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
+  align-items: center;
+  justify-content: center;
 
-.task-card-title h3 {
-  margin: 0;
-}
+  width: 25px;
+  height: 25px;
 
-.task-edit-button {
-  padding: 4px 8px;
+  flex-shrink: 0;
 
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border-radius: 50%;
 
-  background-color: #ffffff;
-  color: #374151;
-  font-size: 12px;
-}
+  background-color: #eff6ff;
+  color: #2563eb;
 
-.task-edit-area {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.task-edit-input {
-  width: 100%;
-  padding: 8px 10px;
-
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-
-  color: #111827;
-}
-
-.task-edit-input:focus {
-  outline: 2px solid #bfdbfe;
-  border-color: #2563eb;
-}
-
-.task-edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.task-edit-cancel,
-.task-edit-save {
-  padding: 5px 9px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.task-edit-cancel {
-  border: 1px solid #d1d5db;
-  background-color: #ffffff;
-  color: #374151;
-}
-
-.task-edit-save {
-  border: 1px solid #2563eb;
-  background-color: #2563eb;
-  color: #ffffff;
-}
-
-.task-edit-save:disabled {
-  border-color: #d1d5db;
-  background-color: #e5e7eb;
-  color: #9ca3af;
-  cursor: not-allowed;
+  font-size: 11px;
+  font-weight: 700;
 }
