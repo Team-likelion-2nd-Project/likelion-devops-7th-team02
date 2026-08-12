@@ -5,10 +5,9 @@ import {
   Plus,
   Users,
 } from 'lucide-react'
-
 import ProjectCreateModal from './ProjectCreateModal'
 import ProjectContext from '../context/ProjectContext'
-
+import { getCurrentProjectRole } from '../utils/projectRole'
 import './Sidebar.css'
 
 function Sidebar() {
@@ -32,14 +31,11 @@ function Sidebar() {
     currentProject?.members?.length ?? 0
 
 
-  const currentProjectMember =
-    currentProject?.members?.find(
-      (member) =>
-        member.userId === currentUser?.userId
+  const currentProjectRole =
+    getCurrentProjectRole(
+      currentProject?.members,
+      currentUser?.userId
     )
-  
-  const currentProjectRole = 
-   currentProjectMember?.role ?? null
 
   const isProjectDetail =
     location.pathname.startsWith('/projects/') &&
