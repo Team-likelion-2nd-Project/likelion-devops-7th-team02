@@ -26,6 +26,8 @@
   width: 38px;
   height: 38px;
 
+  flex-shrink: 0;
+
   border-radius: 10px;
 
   background-color: #eff6ff;
@@ -54,6 +56,7 @@
 /* Error */
 .state-message-error {
   border-color: #fecaca;
+
   background-color: #fffafa;
 }
 

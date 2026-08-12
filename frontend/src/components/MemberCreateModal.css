@@ -27,6 +27,7 @@
     0 20px 50px rgba(15, 23, 42, 0.18);
 }
 
+/* Header */
 .member-modal-header {
   display: flex;
   align-items: flex-start;
@@ -58,6 +59,8 @@
   width: 34px;
   height: 34px;
 
+  flex-shrink: 0;
+
   border: none;
   border-radius: 8px;
 
@@ -67,8 +70,10 @@
 
 .member-modal-close:hover {
   background-color: #f3f4f6;
+  color: #111827;
 }
 
+/* Form */
 .member-modal-field {
   display: grid;
   gap: 8px;
@@ -89,19 +94,29 @@
 
   border: 1px solid #d1d5db;
   border-radius: 8px;
-
   outline: none;
 
   background-color: #ffffff;
   color: #111827;
+
+  font-size: 14px;
 }
 
 .member-modal-field input:focus,
 .member-modal-field select:focus {
   border-color: #2563eb;
   outline: 2px solid #dbeafe;
+  outline-offset: 0;
 }
 
+.member-modal-error {
+  margin: 4px 0 0;
+
+  color: #dc2626;
+  font-size: 13px;
+}
+
+/* Actions */
 .member-modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -127,11 +142,20 @@
   color: #374151;
 }
 
+.member-modal-cancel:hover {
+  background-color: #f9fafb;
+}
+
 .member-modal-submit {
   border: 1px solid #2563eb;
 
   background-color: #2563eb;
   color: #ffffff;
+}
+
+.member-modal-submit:hover:not(:disabled) {
+  border-color: #1d4ed8;
+  background-color: #1d4ed8;
 }
 
 .member-modal-submit:disabled {
@@ -143,9 +167,13 @@
   cursor: not-allowed;
 }
 
-.member-modal-error {
-  margin: 4px 0 0;
+/* Responsive */
+@media (max-width: 520px) {
+  .member-modal-overlay {
+    padding: 16px;
+  }
 
-  color: #dc2626;
-  font-size: 13px;
+  .member-modal {
+    padding: 20px;
+  }
 }

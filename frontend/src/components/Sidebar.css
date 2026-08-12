@@ -16,6 +16,7 @@
   background-color: #ffffff;
 }
 
+/* Project Section */
 .sidebar-section {
   display: grid;
   gap: 12px;
@@ -53,6 +54,7 @@
   color: #2563eb;
 }
 
+/* Project List */
 .sidebar-project-list {
   display: grid;
   gap: 4px;
@@ -63,7 +65,7 @@
   align-items: center;
   gap: 10px;
 
-  padding: 10px 10px;
+  padding: 10px;
 
   border-radius: 8px;
 
@@ -74,6 +76,7 @@
 
 .sidebar-project-item span {
   overflow: hidden;
+
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -89,7 +92,7 @@
   font-weight: 600;
 }
 
-/* Bottom */
+/* Project Detail Info */
 .sidebar-bottom {
   display: grid;
   gap: 16px;
@@ -118,34 +121,38 @@
   width: 34px;
   height: 34px;
 
+  flex-shrink: 0;
+
   border-radius: 8px;
   background-color: #eef4ff;
 
   color: #2563eb;
 }
 
-.sidebar-team-header > div:last-child {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.sidebar-team-header strong {
-  color: #111827;
-  font-size: 13px;
-}
-
-.sidebar-team-header span {
-  color: #9ca3af;
-  font-size: 11px;
-}
-/*왼쪽 하단 권한 표시*/
 .sidebar-team-info {
   display: flex;
   flex-direction: column;
   gap: 3px;
+
+  min-width: 0;
 }
 
+.sidebar-team-info > strong {
+  overflow: hidden;
+
+  color: #111827;
+  font-size: 13px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-team-info > span {
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+/* Project Role */
 .sidebar-role {
   display: flex;
   flex-direction: column;
@@ -155,42 +162,38 @@
 }
 
 .sidebar-role strong {
+  color: #111827;
   font-size: 12px;
   font-weight: 700;
 }
 
 .sidebar-role span {
-  font-size: 12px;
   color: #64748b;
+  font-size: 12px;
 }
 
+/* Responsive */
 @media (max-width: 900px) {
   .main-sidebar {
     width: 72px;
     min-width: 72px;
+
     padding: 20px 10px;
   }
 
   .sidebar-section-header > span,
   .sidebar-project-item span,
-  .sidebar-team-header > div:last-child,
-  .sidebar-storage {
+  .sidebar-team-info {
     display: none;
   }
 
-  .sidebar-section-header {
-    justify-content: center;
-  }
-
-  .sidebar-project-item {
+  .sidebar-section-header,
+  .sidebar-project-item,
+  .sidebar-team-header {
     justify-content: center;
   }
 
   .sidebar-team-card {
     padding: 10px;
-  }
-
-  .sidebar-team-header {
-    justify-content: center;
   }
 }
