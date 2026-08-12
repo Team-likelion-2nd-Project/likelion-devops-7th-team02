@@ -138,6 +138,7 @@ function ProjectProvider({ children }) {
 
     const newProject = normalizeProject({
       ...project,
+      role: 'OWNER',
       members:
         memberResponse.data.data ?? [],
       tasks:

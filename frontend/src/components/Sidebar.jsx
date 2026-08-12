@@ -2,7 +2,6 @@ import { useContext, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   FolderKanban,
-  HardDrive,
   Plus,
   Users,
 } from 'lucide-react'
@@ -14,7 +13,10 @@ import './Sidebar.css'
 
 function Sidebar() {
   const location = useLocation()
-  const { projectList } = useContext(ProjectContext)
+  const { 
+    projectList,
+    currentUser,
+   } = useContext(ProjectContext)
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
 
@@ -28,6 +30,20 @@ function Sidebar() {
 
   const currentProjectMemberCount =
     currentProject?.members?.length ?? 0
+
+
+  const currentProjectMember =
+    currentProject?.members?.find(
+      (member) =>
+        member.userId === currentUser?.userId
+    )
+  
+  const currentProjectRole = 
+   currentProjectMember?.role ?? null
+
+  const isProjectDetail =
+    location.pathname.startsWith('/projects/') &&
+    Boolean(currentProject)
 
   return (
     <aside className="main-sidebar">
@@ -64,54 +80,45 @@ function Sidebar() {
         </nav>
       </div>
 
-      {/* Sidebar Bottom */}
-      <div className="sidebar-bottom">
-        {/* Project Team */}
-        <div className="sidebar-team-card">
-          <div className="sidebar-team-header">
-            <div className="sidebar-team-icon">
-              <Users size={17} />
-            </div>
+      {/* Project Detail Info */}
+      {isProjectDetail && (
+        <div className="sidebar-bottom">
+          <div className="sidebar-team-card">
+            <div className="sidebar-team-header">
+              <div className="sidebar-team-icon">
+                <Users size={17} />
+              </div>
 
-            <div>
-              <strong>
-                {currentProject?.name ?? 'DevFlow Team'}
-              </strong>
+              <div className="sidebar-team-info">
+                <strong>
+                  {currentProject.name}
+                </strong>
 
-              <span>
-                {currentProject
-                  ? `${currentProjectMemberCount} ${
-                      currentProjectMemberCount === 1
-                        ? 'member'
-                        : 'members'
-                    }`
-                  : '프로젝트를 선택하세요'}
-              </span>
+                <span>
+                  {currentProjectMemberCount}{' '}
+                  {currentProjectMemberCount === 1
+                    ? 'member'
+                    : 'members'}
+                </span>
+
+                {currentProjectRole && (
+                  <div className="sidebar-role">
+                    <strong>
+                      {currentProjectRole}
+                    </strong>
+
+                    <span>
+                      {currentProjectRole === 'OWNER'
+                        ? '프로젝트 관리자'
+                        : '프로젝트 멤버'}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Storage */}
-        <div className="sidebar-storage">
-          <div className="sidebar-storage-header">
-            <div>
-              <HardDrive size={15} />
-              <span>저장소 사용량</span>
-            </div>
-
-            <span>72%</span>
-          </div>
-
-          <div className="sidebar-storage-track">
-            <div className="sidebar-storage-progress" />
-          </div>
-
-          <div className="sidebar-storage-info">
-            <span>7.2 GB</span>
-            <span>10 GB</span>
-          </div>
-        </div>
-      </div>
+      )}
 
       <ProjectCreateModal
         isOpen={isCreateOpen}

@@ -17,6 +17,7 @@ import {
   updateTaskAssignee,
 } from '../api/taskApi'
 import { getHealth } from '../api/healthApi'
+import { getProject } from '../api/projectApi'
 import './ProjectDetailPage.css'
 
 
@@ -42,13 +43,23 @@ function normalizeTask(task) {
 function ProjectDetailContent({ projectId }) {
   const {
     projectList,
+    currentUser,
     isLoading: isProjectLoading,
     error: projectError,
   } = useContext(ProjectContext)
 
-  const project = projectList.find(
+  const projectSummary = projectList.find(
     (project) => project.id === Number(projectId)
   )
+
+  const [projectDetail, setProjectDetail] = useState(null)
+  const [isProjectDetailLoading, setIsProjectDetailLoading] =
+    useState(true)
+  const [projectDetailError, setProjectDetailError] =
+    useState('')
+
+  const project =
+    projectDetail ?? projectSummary
 
   // Member
   const [memberList, setMemberList] = useState([])
@@ -61,12 +72,53 @@ function ProjectDetailContent({ projectId }) {
   const [taskList, setTaskList] = useState([])
   const [isTaskLoading, setIsTaskLoading] = useState(true)
   const [taskError, setTaskError] = useState('')
+  const [openTaskMenuId, setOpenTaskMenuId] = useState(null)
 
-    // Health
+  // Health
   const [healthStatus, setHealthStatus] = useState(null)
   const [healthHttpStatus, setHealthHttpStatus] = useState(null)
   const [isHealthLoading, setIsHealthLoading] = useState(true)
   const [healthError, setHealthError] = useState('')
+
+  const currentProjectMember = memberList.find(
+    (member) =>
+      member.userId === currentUser?.userId
+  )
+
+  const currentProjectRole =
+    currentProjectMember?.role ?? null
+
+  const isOwner =
+    currentProjectRole === 'OWNER'
+
+  useEffect(() => {
+    let cancelled = false
+
+    getProject(projectId)
+      .then((response) => {
+        if (cancelled) return
+
+        setProjectDetail(response.data.data ?? null)
+        setProjectDetailError('')
+      })
+      .catch((error) => {
+        if (cancelled) return
+
+        setProjectDetailError(
+          error.response?.data?.message ??
+            '프로젝트 상세 정보를 불러오지 못했습니다.'
+        )
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsProjectDetailLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [projectId])
 
   useEffect(() => {
     let cancelled = false
@@ -86,9 +138,9 @@ function ProjectDetailContent({ projectId }) {
         )
       })
       .finally(() => {
-        if (cancelled) return
-
-        setIsMemberLoading(false)
+        if (!cancelled){
+          setIsMemberLoading(false)
+        }
       })
 
     return () => {
@@ -118,9 +170,9 @@ function ProjectDetailContent({ projectId }) {
         )
       })
       .finally(() => {
-        if (cancelled) return
-
-        setIsTaskLoading(false)
+        if (!cancelled){
+          setIsTaskLoading(false)
+        }
       })
 
     return () => {
@@ -159,8 +211,6 @@ function ProjectDetailContent({ projectId }) {
         cancelled = true
       }
     }, [])
-
-  const [openTaskMenuId, setOpenTaskMenuId] = useState(null)
 
   const handleCreateMember = async ({ email }) => {
     const response = await addMember(
@@ -269,7 +319,7 @@ function ProjectDetailContent({ projectId }) {
     )
   }
 
-  if (isProjectLoading) {
+  if (isProjectLoading || isProjectDetailLoading ) {
     return (
       <div className="project-detail-page">
         <Loading />
@@ -277,10 +327,12 @@ function ProjectDetailContent({ projectId }) {
     )
   }
 
-  if (projectError) {
+  if (projectError || projectDetailError) {
     return (
       <div className="project-detail-page">
-        <ErrorMessage message={projectError} />
+        <ErrorMessage
+          message={projectError || projectDetailError}
+        />
       </div>
     )
   }
@@ -551,20 +603,24 @@ function ProjectDetailContent({ projectId }) {
             <div className="project-side-card-header">
               <h2>멤버</h2>
 
-              <button
-                type="button"
-                className="project-member-add-button"
-                onClick={() => setIsMemberCreateOpen(true)}
-              >
-                + 추가
-              </button>
+              {isOwner && (
+                <button
+                  type="button"
+                  className="project-member-add-button"
+                  onClick={() => setIsMemberCreateOpen(true)}
+                >
+                  + 추가
+                </button>
+              )}
             </div>
 
-            <MemberCreateModal
-              isOpen={isMemberCreateOpen}
-              onCreate={handleCreateMember}
-              onClose={() => setIsMemberCreateOpen(false)}
-            />
+            {isOwner &&(
+              <MemberCreateModal
+                isOpen={isMemberCreateOpen}
+                onCreate={handleCreateMember}
+                onClose={() => setIsMemberCreateOpen(false)}
+              />
+            )}
 
             {isMemberLoading ? (
               <p className="project-section-empty">
@@ -582,7 +638,7 @@ function ProjectDetailContent({ projectId }) {
               <div className="project-member-list">
                 {memberList.map((member) => (
                   <div
-                    key={member.memberId}
+                    key={member.userId}
                     className="project-member-item"
                   >
                     <div className="project-member-avatar">
