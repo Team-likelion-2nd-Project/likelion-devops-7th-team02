@@ -47,6 +47,36 @@ module "gitlab-alb" {
   certificate_arn = var.certificate_arn
 }
 
+# connect Gitlab_ALB -> Route53
+data "aws_route53_zone" "main" {
+  name         = "manoit.co.kr"
+  private_zone = false
+}
+
+resource "aws_route53_record" "gitlab" {
+  zone_id = data.aws_route53_zone.main.zone_id
+  name    = "team02-gitlab.manoit.co.kr"
+  type    = "A"
+
+  alias {
+    name                   = module.gitlab-alb.alb_dns_name
+    zone_id                = module.gitlab-alb.alb_zone_id
+    evaluate_target_health = true
+  }
+}
+
+module "external_dns_iam" {
+  source = "../../modules/external-dns-iam"
+
+  project_name      = var.project_name
+  environment       = var.environment
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_issuer_url   = module.eks.oidc_provider_url
+
+  # Reuse the existing manoit.co.kr public hosted zone already looked up above (data.aws_route53_zone.main).
+  hosted_zone_id = data.aws_route53_zone.main.zone_id
+}
+
 module "rds" {
   source = "../../modules/rds"
 
@@ -77,6 +107,28 @@ module "eks" {
   node_min_size              = 2
   node_desired_size          = 2
   node_max_size              = 4
+}
+
+module "alb_controller_iam" {
+  source = "../../modules/alb-controller-iam"
+
+  project_name      = var.project_name
+  environment       = var.environment
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_issuer_url   = module.eks.oidc_provider_url
+}
+
+# --- Application ACM (team02-app.manoit.co.kr) ---------------------------------
+# Phase 6: HTTPS 기반 Application 인증서. DNS 검증 방식으로, 기존 manoit.co.kr
+# public hosted zone(data.aws_route53_zone.main)을 재사용한다.
+# GitLab DNS(team02-gitlab.manoit.co.kr), GitLab ALB, GitLab ACM은 절대 수정하지 않는다.
+module "application_acm" {
+  source = "../../modules/application-acm"
+
+  project_name   = var.project_name
+  environment    = var.environment
+  domain_name    = var.application_domain
+  hosted_zone_id = data.aws_route53_zone.main.zone_id
 }
 
 resource "aws_iam_role_policy" "gitlab_eks_describe" {

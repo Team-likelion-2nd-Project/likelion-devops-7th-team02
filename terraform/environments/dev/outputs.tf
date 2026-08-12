@@ -128,3 +128,46 @@ output "eks_launch_template_id" {
   description = "Launch template ID used by the managed node group (enforces DevFlow EKS Node SG)"
   value       = module.eks.launch_template_id
 }
+
+# --- Application ACM ----------------------------------------------------------
+output "application_acm_certificate_arn" {
+  description = "ACM Certificate ARN for the application domain team02-app.manoit.co.kr. Use in Kubernetes Ingress annotation: alb.ingress.kubernetes.io/certificate-arn"
+  value       = module.application_acm.certificate_arn
+}
+
+output "application_acm_certificate_id" {
+  description = "ACM Certificate ID for the application domain team02-app.manoit.co.kr"
+  value       = module.application_acm.certificate_id
+}
+
+# --- ALB Controller IAM ---------------------------------------------------
+output "alb_controller_role_arn" {
+  description = "IAM Role ARN for AWS Load Balancer Controller (for ServiceAccount annotation eks.amazonaws.com/role-arn)"
+  value       = module.alb_controller_iam.role_arn
+}
+
+output "alb_controller_role_name" {
+  description = "IAM Role name for AWS Load Balancer Controller"
+  value       = module.alb_controller_iam.role_name
+}
+
+output "alb_controller_policy_arn" {
+  description = "IAM Policy ARN of the official AWS Load Balancer Controller policy (v2.14.1)"
+  value       = module.alb_controller_iam.policy_arn
+}
+
+# --- ExternalDNS IAM ------------------------------------------------------
+output "external_dns_role_arn" {
+  description = "IAM Role ARN for ExternalDNS (for ServiceAccount annotation eks.amazonaws.com/role-arn). Scoped to Route53 changes in manoit.co.kr hosted zone."
+  value       = module.external_dns_iam.role_arn
+}
+
+output "external_dns_role_name" {
+  description = "IAM Role name for ExternalDNS"
+  value       = module.external_dns_iam.role_name
+}
+
+output "external_dns_policy_arn" {
+  description = "IAM Policy ARN of the ExternalDNS Route53 least-privilege policy (scoped to manoit.co.kr hosted zone)"
+  value       = module.external_dns_iam.policy_arn
+}

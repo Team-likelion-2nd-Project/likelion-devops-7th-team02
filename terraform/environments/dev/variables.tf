@@ -82,7 +82,13 @@ variable "node_instance_type" {
 }
 
 variable "certificate_arn" {
-  description = "ACM arn"
+  description = "ACM arn (GitLab ALB HTTPS listener)"
   type        = string
   sensitive   = true
+}
+
+variable "application_domain" {
+  description = "Application domain covered by the Application ACM certificate (team02-app.manoit.co.kr). Must NOT be confused with the GitLab domain team02-gitlab.manoit.co.kr."
+  type        = string
+  default     = "team02-app.manoit.co.kr"
 }
