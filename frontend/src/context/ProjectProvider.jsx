@@ -105,12 +105,11 @@ function ProjectProvider({ children }) {
             '프로젝트 정보를 불러오지 못했습니다.'
         )
       } finally {
-        if (cancelled) return
-
-        setIsLoading(false)
+        if (!cancelled) {
+          setIsLoading(false)
+        }
       }
     }
-
     loadDashboardData()
 
     return () => {
