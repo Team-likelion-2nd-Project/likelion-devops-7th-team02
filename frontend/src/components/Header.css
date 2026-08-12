@@ -228,7 +228,8 @@
   background-color: #e5e7eb;
 }
 
-.profile-menu-logout {
+.profile-menu-logout,
+.profile-menu-login {
   display: flex;
   align-items: center;
   gap: 9px;
