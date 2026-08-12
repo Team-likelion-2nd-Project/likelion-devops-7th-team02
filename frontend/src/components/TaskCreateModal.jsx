@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+
 import './TaskCreateModal.css'
 
 function TaskCreateModal({
@@ -9,8 +11,10 @@ function TaskCreateModal({
   onClose,
 }) {
   const [title, setTitle] = useState('')
-  const [status, setStatus] = useState('TODO')
-  const [assignee, setAssignee] = useState('')
+  const [description, setDescription] = useState('')
+  const [assigneeId, setAssigneeId] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   if (!isOpen) return null
 
@@ -18,8 +22,9 @@ function TaskCreateModal({
 
   const resetForm = () => {
     setTitle('')
-    setStatus('TODO')
-    setAssignee('')
+    setDescription('')
+    setAssigneeId('')
+    setError('')
   }
 
   const closeModal = () => {
@@ -27,19 +32,34 @@ function TaskCreateModal({
     onClose()
   }
 
-  const handleCreate = () => {
-    if (!isFormValid) return
+  const handleCreate = async () => {
+    if (!isFormValid || isSubmitting) return
 
-    onCreate({
-      title: title.trim(),
-      status,
-      assignee: assignee || '담당자 없음',
-    })
+    try {
+      setIsSubmitting(true)
+      setError('')
 
-    closeModal()
+      await onCreate({
+        title: title.trim(),
+        description: description.trim(),
+        assigneeId:
+          assigneeId === ''
+            ? null
+            : Number(assigneeId),
+      })
+
+      closeModal()
+    } catch (error) {
+      setError(
+        error.response?.data?.message ??
+          '작업 생성에 실패했습니다.'
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  return (
+  return createPortal(
     <div
       className="task-modal-overlay"
       onMouseDown={closeModal}
@@ -48,6 +68,7 @@ function TaskCreateModal({
         className="task-modal"
         onMouseDown={(event) => event.stopPropagation()}
       >
+        {/* Header */}
         <div className="task-modal-header">
           <div>
             <h2>새 작업 만들기</h2>
@@ -64,6 +85,7 @@ function TaskCreateModal({
           </button>
         </div>
 
+        {/* Task Title */}
         <div className="task-modal-field">
           <label htmlFor="task-title">
             작업 제목
@@ -72,28 +94,34 @@ function TaskCreateModal({
           <input
             id="task-title"
             type="text"
+            maxLength={100}
             placeholder="작업 제목을 입력하세요."
             value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            onChange={(event) =>
+              setTitle(event.target.value)
+            }
           />
         </div>
 
+        {/* Task Description */}
         <div className="task-modal-field">
-          <label htmlFor="task-status">
-            상태
+          <label htmlFor="task-description">
+            작업 설명
           </label>
 
-          <select
-            id="task-status"
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-          >
-            <option value="TODO">To Do</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="DONE">Done</option>
-          </select>
+          <textarea
+            id="task-description"
+            rows="4"
+            maxLength={1000}
+            placeholder="작업 설명을 입력하세요."
+            value={description}
+            onChange={(event) =>
+              setDescription(event.target.value)
+            }
+          />
         </div>
 
+        {/* Assignee */}
         <div className="task-modal-field">
           <label htmlFor="task-assignee">
             담당자
@@ -101,15 +129,17 @@ function TaskCreateModal({
 
           <select
             id="task-assignee"
-            value={assignee}
-            onChange={(event) => setAssignee(event.target.value)}
+            value={assigneeId}
+            onChange={(event) =>
+              setAssigneeId(event.target.value)
+            }
           >
             <option value="">담당자 없음</option>
 
             {members.map((member) => (
               <option
-                key={member.id}
-                value={member.name}
+                key={member.memberId}
+                value={member.userId}
               >
                 {member.name}
               </option>
@@ -117,6 +147,17 @@ function TaskCreateModal({
           </select>
         </div>
 
+        {/* Error */}
+        {error && (
+          <p
+            className="task-modal-error"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+
+        {/* Actions */}
         <div className="task-modal-actions">
           <button
             type="button"
@@ -129,14 +170,17 @@ function TaskCreateModal({
           <button
             type="button"
             className="task-modal-submit"
-            disabled={!isFormValid}
+            disabled={!isFormValid || isSubmitting}
             onClick={handleCreate}
           >
-            작업 생성
+            {isSubmitting
+              ? '생성 중...'
+              : '작업 생성'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

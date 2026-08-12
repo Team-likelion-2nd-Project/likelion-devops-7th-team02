@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Bell,
@@ -7,10 +7,15 @@ import {
   Search,
   Settings,
 } from 'lucide-react'
+
+import ProjectContext from '../context/ProjectContext'
+
 import './Header.css'
 
 function Header() {
   const navigate = useNavigate()
+  const { currentUser } = useContext(ProjectContext)
+
   const [isProfileOpen, setIsProfileOpen] = useState(false)
 
   const handleLogout = () => {
@@ -23,6 +28,7 @@ function Header() {
 
   return (
     <header className="main-header">
+      {/* Logo */}
       <div className="main-header-left">
         <Link
           to="/projects"
@@ -36,6 +42,7 @@ function Header() {
         </Link>
       </div>
 
+      {/* Search */}
       <div className="main-header-search">
         <Search size={18} />
 
@@ -46,6 +53,7 @@ function Header() {
         />
       </div>
 
+      {/* Header Actions */}
       <div className="main-header-actions">
         <button
           type="button"
@@ -63,19 +71,27 @@ function Header() {
           <Settings size={19} />
         </button>
 
+        {/* Profile */}
         <div className="main-header-profile">
           <button
             type="button"
             className="main-header-profile-button"
-            onClick={() => setIsProfileOpen(!isProfileOpen)}
+            onClick={() =>
+              setIsProfileOpen((prev) => !prev)
+            }
           >
             <div className="main-header-avatar">
-              U
+              {currentUser?.name?.charAt(0) ?? 'U'}
             </div>
 
             <div className="main-header-user-info">
-              <strong>사용자</strong>
-              <span>Frontend</span>
+              <strong>
+                {currentUser?.name ?? '사용자'}
+              </strong>
+
+              <span>
+                {currentUser?.email ?? ''}
+              </span>
             </div>
 
             <ChevronDown size={15} />
@@ -85,12 +101,17 @@ function Header() {
             <div className="profile-menu">
               <div className="profile-menu-user">
                 <div className="profile-menu-avatar">
-                  U
+                  {currentUser?.name?.charAt(0) ?? 'U'}
                 </div>
 
                 <div>
-                  <strong>사용자</strong>
-                  <span>Frontend</span>
+                  <strong>
+                    {currentUser?.name ?? '사용자'}
+                  </strong>
+
+                  <span>
+                    {currentUser?.email ?? ''}
+                  </span>
                 </div>
               </div>
 
