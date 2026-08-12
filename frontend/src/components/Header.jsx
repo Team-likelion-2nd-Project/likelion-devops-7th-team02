@@ -1,17 +1,32 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Bell,
   ChevronDown,
+  LogIn,
   LogOut,
   Search,
   Settings,
 } from 'lucide-react'
+
+import ProjectContext from '../context/ProjectContext'
+
 import './Header.css'
 
 function Header() {
   const navigate = useNavigate()
+  const { currentUser } = useContext(ProjectContext)
+
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+
+  const accessToken = localStorage.getItem('accessToken')
+  const hasToken = Boolean(accessToken)
+  const isLoggedIn = Boolean(hasToken && currentUser)
+
+  const handleLogin = () => {
+    setIsProfileOpen(false)
+    navigate('/login')
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken')
@@ -23,9 +38,10 @@ function Header() {
 
   return (
     <header className="main-header">
+      {/* Logo */}
       <div className="main-header-left">
         <Link
-          to="/projects"
+          to={hasToken ? '/projects' : '/login'}
           className="main-header-logo"
         >
           <div className="main-header-logo-icon">
@@ -36,6 +52,7 @@ function Header() {
         </Link>
       </div>
 
+      {/* Search */}
       <div className="main-header-search">
         <Search size={18} />
 
@@ -46,6 +63,7 @@ function Header() {
         />
       </div>
 
+      {/* Header Actions */}
       <div className="main-header-actions">
         <button
           type="button"
@@ -63,19 +81,35 @@ function Header() {
           <Settings size={19} />
         </button>
 
+        {/* Profile */}
         <div className="main-header-profile">
           <button
             type="button"
             className="main-header-profile-button"
-            onClick={() => setIsProfileOpen(!isProfileOpen)}
+            onClick={() =>
+              setIsProfileOpen((prev) => !prev)
+            }
           >
             <div className="main-header-avatar">
-              U
+              {isLoggedIn
+                ? currentUser.name.charAt(0)
+                : 'U'}
             </div>
 
             <div className="main-header-user-info">
-              <strong>사용자</strong>
-              <span>Frontend</span>
+              <strong>
+                {!hasToken
+                  ? '로그인이 필요합니다'
+                  : currentUser
+                    ? currentUser.name
+                    : '사용자 정보 확인 중...'}
+              </strong>
+
+              <span>
+                {isLoggedIn
+                  ? currentUser.email
+                  : ''}
+              </span>
             </div>
 
             <ChevronDown size={15} />
@@ -85,25 +119,47 @@ function Header() {
             <div className="profile-menu">
               <div className="profile-menu-user">
                 <div className="profile-menu-avatar">
-                  U
+                  {isLoggedIn
+                    ? currentUser.name.charAt(0)
+                    : 'U'}
                 </div>
 
                 <div>
-                  <strong>사용자</strong>
-                  <span>Frontend</span>
+                  <strong>
+                    {isLoggedIn
+                      ? currentUser.name
+                      : '로그인이 필요합니다'}
+                  </strong>
+
+                  <span>
+                    {isLoggedIn
+                      ? currentUser.email
+                      : '로그인 후 이용해주세요.'}
+                  </span>
                 </div>
               </div>
 
               <div className="profile-menu-divider" />
 
-              <button
-                type="button"
-                className="profile-menu-logout"
-                onClick={handleLogout}
-              >
-                <LogOut size={17} />
-                로그아웃
-              </button>
+              {isLoggedIn ? (
+                <button
+                  type="button"
+                  className="profile-menu-logout"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={17} />
+                  로그아웃
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="profile-menu-login"
+                  onClick={handleLogin}
+                >
+                  <LogIn size={17} />
+                  로그인
+                </button>
+              )}
             </div>
           )}
         </div>

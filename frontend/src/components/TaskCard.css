@@ -16,7 +16,7 @@
 }
 
 .task-card:has(.task-card-menu) {
-  z-index: 1000;
+  z-index: 20;
 }
 
 .task-card:hover {
@@ -76,7 +76,7 @@
   position: absolute;
   top: 32px;
   right: 0;
-  z-index: 1100;
+  z-index: 30;
 
   width: 110px;
 

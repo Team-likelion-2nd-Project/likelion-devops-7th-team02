@@ -1,10 +1,24 @@
-import { useContext, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ProjectContext from '../context/ProjectContext'
 import TaskCard from '../components/TaskCard'
 import TaskCreateModal from '../components/TaskCreateModal'
 import MemberCreateModal from '../components/MemberCreateModal'
+import Loading from '../components/Loading'
+import ErrorMessage from '../components/ErrorMessage'
+import {
+  addMember,
+  getMembers,
+} from '../api/memberApi'
+import {
+  createTask,
+  getTasks,
+  updateTaskStatus,
+  updateTaskAssignee,
+} from '../api/taskApi'
+import { getHealth } from '../api/healthApi'
 import './ProjectDetailPage.css'
+
 
 function ProjectDetailPage() {
   const { projectId } = useParams()
@@ -17,64 +31,202 @@ function ProjectDetailPage() {
   )
 }
 
+function normalizeTask(task) {
+  return {
+    ...task,
+    assignee:
+      task.assigneeName ?? '담당자 없음',
+  }
+}
+
 function ProjectDetailContent({ projectId }) {
-  const { projectList } = useContext(ProjectContext)
+  const {
+    projectList,
+    isLoading: isProjectLoading,
+    error: projectError,
+  } = useContext(ProjectContext)
 
   const project = projectList.find(
     (project) => project.id === Number(projectId)
   )
 
   // Member
-  const [memberList, setMemberList] = useState(project?.members ?? [])
+  const [memberList, setMemberList] = useState([])
   const [isMemberCreateOpen, setIsMemberCreateOpen] = useState(false)
+  const [isMemberLoading, setIsMemberLoading] = useState(true)
+  const [memberError, setMemberError] = useState('')
 
   // Task
   const [isTaskCreateOpen, setIsTaskCreateOpen] = useState(false)
-  const [taskList, setTaskList] = useState(project?.tasks ?? [])
+  const [taskList, setTaskList] = useState([])
+  const [isTaskLoading, setIsTaskLoading] = useState(true)
+  const [taskError, setTaskError] = useState('')
+
+    // Health
+  const [healthStatus, setHealthStatus] = useState(null)
+  const [healthHttpStatus, setHealthHttpStatus] = useState(null)
+  const [isHealthLoading, setIsHealthLoading] = useState(true)
+  const [healthError, setHealthError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+
+    getMembers(projectId)
+      .then((response) => {
+        if (cancelled) return
+
+        setMemberList(response.data.data ?? [])
+      })
+      .catch((error) => {
+        if (cancelled) return
+
+        setMemberError(
+          error.response?.data?.message ??
+            '프로젝트 멤버를 불러오지 못했습니다.'
+        )
+      })
+      .finally(() => {
+        if (cancelled) return
+
+        setIsMemberLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [projectId])
+
+  useEffect(() => {
+    let cancelled = false
+
+    getTasks(projectId)
+      .then((response) => {
+        if (cancelled) return
+
+        const tasks = response.data.data ?? []
+
+        setTaskList(
+          tasks.map(normalizeTask)
+        )
+      })
+      .catch((error) => {
+        if (cancelled) return
+
+        setTaskError(
+          error.response?.data?.message ??
+            '작업 목록을 불러오지 못했습니다.'
+        )
+      })
+      .finally(() => {
+        if (cancelled) return
+
+        setIsTaskLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [projectId])
+
+    useEffect(() => {
+      let cancelled = false
+
+      getHealth()
+        .then((response) => {
+          if (cancelled) return
+
+          setHealthStatus(
+            response.data?.status ?? 'UNKNOWN'
+          )
+          setHealthHttpStatus(response.status)
+          setHealthError('')
+          setIsHealthLoading(false)
+        })
+        .catch((error) => {
+          if (cancelled) return
+
+          setHealthStatus('DOWN')
+          setHealthHttpStatus(
+            error.response?.status ?? null
+          )
+          setHealthError(
+            'Backend Health Check에 실패했습니다.'
+          )
+          setIsHealthLoading(false)
+        })
+
+      return () => {
+        cancelled = true
+      }
+    }, [])
+
   const [openTaskMenuId, setOpenTaskMenuId] = useState(null)
 
-  const handleCreateMember = ({
-    name,
-    role,
-  }) => {
-    const newMember = {
-      id: Date.now(),
-      name,
-      role,
-    }
+  const handleCreateMember = async ({ email }) => {
+    const response = await addMember(
+      projectId,
+      { email }
+    )
+
+    const newMember = response.data.data
 
     setMemberList((prevMembers) => [
       ...prevMembers,
       newMember,
     ])
+
+    return newMember
   }
 
-  const handleCreateTask = ({
+  const handleCreateTask = async ({
     title,
-    status,
-    assignee,
+    description,
+    assigneeId,
   }) => {
-    const newTask = {
-      id: Date.now(),
-      title,
-      status,
-      assignee,
-    }
+    const response = await createTask(
+      projectId,
+      {
+        title,
+        description,
+        assigneeId,
+      }
+    )
+
+    const newTask = normalizeTask(
+      response.data.data
+    )
 
     setTaskList((prevTasks) => [
       ...prevTasks,
       newTask,
     ])
+
+    return newTask
   }
 
-  const handleTaskStatusChange = (taskId, status) => {
+  const handleTaskStatusChange = async (
+    taskId,
+    status
+  ) => {
+    const response = await updateTaskStatus(
+      projectId,
+      taskId,
+      status
+    )
+
+    const updatedTask = normalizeTask(
+      response.data.data
+    )
+
     setTaskList((prevTasks) =>
       prevTasks.map((task) =>
         task.id === taskId
-          ? { ...task, status }
+          ? updatedTask
           : task
       )
     )
+
+    return updatedTask
   }
 
   const handleTaskTitleChange = (taskId, title) => {
@@ -87,22 +239,49 @@ function ProjectDetailContent({ projectId }) {
     )
   }
 
-  const handleTaskAssigneeChange = (taskId, assignee) => {
+  const handleTaskAssigneeChange = async (
+    taskId,
+    assigneeId
+  ) => {
+    const response = await updateTaskAssignee(
+      projectId,
+      taskId,
+      assigneeId
+    )
+
+    const updatedTask = normalizeTask(
+      response.data.data
+    )
+
     setTaskList((prevTasks) =>
       prevTasks.map((task) =>
         task.id === taskId
-          ? {
-              ...task,
-              assignee: assignee || '담당자 없음',
-            }
+          ? updatedTask
           : task
       )
     )
-  }
 
+    return updatedTask
+  }
   const handleDeleteTask = (taskId) => {
     setTaskList((prevTasks) =>
       prevTasks.filter((task) => task.id !== taskId)
+    )
+  }
+
+  if (isProjectLoading) {
+    return (
+      <div className="project-detail-page">
+        <Loading />
+      </div>
+    )
+  }
+
+  if (projectError) {
+    return (
+      <div className="project-detail-page">
+        <ErrorMessage message={projectError} />
+      </div>
     )
   }
 
@@ -128,6 +307,9 @@ function ProjectDetailContent({ projectId }) {
   const doneTasks = taskList.filter(
     (task) => task.status === 'DONE'
   )
+
+    const isBackendHealthy =
+    healthStatus === 'UP'
 
   return (
     <div className="project-detail-page">
@@ -170,6 +352,11 @@ function ProjectDetailContent({ projectId }) {
               onClose={() => setIsTaskCreateOpen(false)}
             />
 
+            {isTaskLoading ? (
+              <Loading />
+            ) : taskError ? (
+              <ErrorMessage message={taskError} />
+            ) : (
             <div className="task-board">
               {/* To Do */}
               <div className="task-column">
@@ -270,6 +457,7 @@ function ProjectDetailContent({ projectId }) {
                 </div>
               </div>
             </div>
+            )}
           </section>
 
           {/* Backend Health */}
@@ -287,15 +475,35 @@ function ProjectDetailContent({ projectId }) {
               <div className="health-summary-item">
                 <span>API Server</span>
 
-                <div className="health-status healthy">
+                <div
+                  className={`health-status ${
+                    isBackendHealthy ? 'healthy' : ''
+                  }`}
+                >
                   <span className="health-dot" />
-                  정상
+
+                  {isHealthLoading
+                    ? '확인 중'
+                    : isBackendHealthy
+                      ? '정상'
+                      : '오류'}
                 </div>
               </div>
 
               <div className="health-summary-item">
                 <span>응답 상태</span>
-                <strong>200 OK</strong>
+
+                <strong>
+                  {isHealthLoading
+                    ? '확인 중'
+                    : healthHttpStatus
+                      ? `${healthHttpStatus} ${
+                          healthHttpStatus === 200
+                            ? 'OK'
+                            : 'ERROR'
+                        }`
+                      : '연결 실패'}
+                </strong>
               </div>
 
               <div className="health-summary-item">
@@ -303,6 +511,14 @@ function ProjectDetailContent({ projectId }) {
                 <strong>Development</strong>
               </div>
             </div>
+
+            {healthError && (
+              <p className="project-section-empty">
+                {healthError}
+              </p>
+            )}
+
+
           </section>
         </div>
 
@@ -350,7 +566,15 @@ function ProjectDetailContent({ projectId }) {
               onClose={() => setIsMemberCreateOpen(false)}
             />
 
-            {memberList.length === 0 ? (
+            {isMemberLoading ? (
+              <p className="project-section-empty">
+                멤버를 불러오는 중입니다.
+              </p>
+            ) : memberError ? (
+              <p className="project-section-empty">
+                {memberError}
+              </p>
+            ) : memberList.length === 0 ? (
               <p className="project-section-empty">
                 등록된 멤버가 없습니다.
               </p>
@@ -358,7 +582,7 @@ function ProjectDetailContent({ projectId }) {
               <div className="project-member-list">
                 {memberList.map((member) => (
                   <div
-                    key={member.id}
+                    key={member.memberId}
                     className="project-member-item"
                   >
                     <div className="project-member-avatar">
@@ -384,8 +608,17 @@ function ProjectDetailContent({ projectId }) {
                 <span>Backend</span>
 
                 <div className="service-status-value">
-                  <span className="service-dot healthy" />
-                  정상
+                  <span
+                    className={`service-dot ${
+                      isBackendHealthy ? 'healthy' : ''
+                    }`}
+                  />
+
+                  {isHealthLoading
+                    ? '확인 중'
+                    : isBackendHealthy
+                      ? '정상'
+                      : '오류'}
                 </div>
               </div>
 

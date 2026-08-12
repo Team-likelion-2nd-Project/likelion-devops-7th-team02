@@ -58,18 +58,18 @@ mkdir -p /srv/gitlab/config
 mkdir -p /srv/gitlab/logs
 mkdir -p /srv/gitlab/data
 
-# GitLab CE
+# GitLab CE with Container Registry on port 5050
 docker run -d \
   --hostname "${gitlab_hostname}" \
   --name gitlab \
   --restart always \
   -p 80:80 \
-  -p 443:443 \
   -p 2222:22 \
+  -p 5050:5050 \
   -v /srv/gitlab/config:/etc/gitlab \
   -v /srv/gitlab/logs:/var/log/gitlab \
   -v /srv/gitlab/data:/var/opt/gitlab \
-  -e "GITLAB_OMNIBUS_CONFIG=external_url 'http://${gitlab_hostname}'; gitlab_rails['gitlab_shell_ssh_port'] = 2222;" \
+  -e "GITLAB_OMNIBUS_CONFIG=external_url 'https://${gitlab_hostname}'; gitlab_rails['nginx']['listen_port'] = 80; gitlab_rails['nginx']['listen_https'] = false; registry_external_url 'https://${gitlab_hostname}:5050'; registry['nginx']['listen_port'] = 5050; registry['nginx']['listen_https'] = false; gitlab_rails['gitlab_shell_ssh_port'] = 2222;" \
   gitlab/gitlab-ce:latest
 
 # GitLab Runner directory

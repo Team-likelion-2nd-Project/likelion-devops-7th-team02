@@ -1,6 +1,9 @@
 import { useContext, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+
 import ProjectContext from '../context/ProjectContext'
+
 import './ProjectCreateModal.css'
 
 function ProjectCreateModal({
@@ -11,6 +14,8 @@ function ProjectCreateModal({
 
   const [projectName, setProjectName] = useState('')
   const [projectDescription, setProjectDescription] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   if (!isOpen) return null
 
@@ -19,21 +24,34 @@ function ProjectCreateModal({
   const closeModal = () => {
     setProjectName('')
     setProjectDescription('')
+    setError('')
     onClose()
   }
 
-  const handleCreateProject = () => {
-    if (!isFormValid) return
+  const handleCreateProject = async () => {
+    if (!isFormValid || isSubmitting) return
 
-    createProject({
-      name: projectName.trim(),
-      description: projectDescription.trim(),
-    })
+    try {
+      setIsSubmitting(true)
+      setError('')
 
-    closeModal()
+      await createProject({
+        name: projectName.trim(),
+        description: projectDescription.trim(),
+      })
+
+      closeModal()
+    } catch (error) {
+      setError(
+        error.response?.data?.message ??
+          '프로젝트 생성에 실패했습니다.'
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  return (
+  return createPortal(
     <div
       className="project-modal-overlay"
       onMouseDown={closeModal}
@@ -42,10 +60,13 @@ function ProjectCreateModal({
         className="project-modal"
         onMouseDown={(event) => event.stopPropagation()}
       >
+        {/* Header */}
         <div className="project-modal-header">
           <div>
             <h2>새 프로젝트 만들기</h2>
-            <p>새 프로젝트의 기본 정보를 입력하세요.</p>
+            <p>
+              새 프로젝트의 기본 정보를 입력하세요.
+            </p>
           </div>
 
           <button
@@ -58,6 +79,7 @@ function ProjectCreateModal({
           </button>
         </div>
 
+        {/* Project Name */}
         <div className="project-modal-field">
           <label htmlFor="project-name">
             프로젝트 이름
@@ -66,6 +88,7 @@ function ProjectCreateModal({
           <input
             id="project-name"
             type="text"
+            maxLength={100}
             placeholder="프로젝트 이름을 입력하세요."
             value={projectName}
             onChange={(event) =>
@@ -74,6 +97,7 @@ function ProjectCreateModal({
           />
         </div>
 
+        {/* Project Description */}
         <div className="project-modal-field">
           <label htmlFor="project-description">
             프로젝트 설명
@@ -82,6 +106,7 @@ function ProjectCreateModal({
           <textarea
             id="project-description"
             rows="4"
+            maxLength={500}
             placeholder="프로젝트 설명을 입력하세요."
             value={projectDescription}
             onChange={(event) =>
@@ -90,6 +115,17 @@ function ProjectCreateModal({
           />
         </div>
 
+        {/* Error */}
+        {error && (
+          <p
+            className="project-modal-error"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+
+        {/* Actions */}
         <div className="project-modal-actions">
           <button
             type="button"
@@ -102,14 +138,17 @@ function ProjectCreateModal({
           <button
             type="button"
             className="project-modal-submit"
-            disabled={!isFormValid}
+            disabled={!isFormValid || isSubmitting}
             onClick={handleCreateProject}
           >
-            프로젝트 생성
+            {isSubmitting
+              ? '생성 중...'
+              : '프로젝트 생성'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

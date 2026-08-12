@@ -5,32 +5,48 @@ import {
   ListTodo,
   Users,
 } from 'lucide-react'
+
 import ProjectCard from '../components/ProjectCard'
 import ProjectCreateModal from '../components/ProjectCreateModal'
 import EmptyState from '../components/EmptyState'
+import Loading from '../components/Loading'
+import ErrorMessage from '../components/ErrorMessage'
+
 import ProjectContext from '../context/ProjectContext'
+
 import './ProjectListPage.css'
 
 function ProjectListPage() {
-  const { projectList } = useContext(ProjectContext)
+  const {
+    projectList,
+    currentUser,
+    isLoading,
+    error,
+  } = useContext(ProjectContext)
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
 
+  // 전체 Task
   const allTasks = projectList.flatMap(
     (project) => project.tasks ?? []
   )
 
+  // 전체 멤버
   const totalMembers = projectList.reduce(
     (total, project) =>
       total + (project.members?.length ?? 0),
     0
   )
 
-  const currentUserName = '이프론트'
-
+  // 로그인 사용자가 담당하고 있는 작업
+  // DONE 상태는 내 작업에서 제외
   const myTasks = projectList.flatMap((project) =>
     (project.tasks ?? [])
-      .filter((task) => task.assignee === currentUserName)
+      .filter(
+        (task) =>
+          task.assigneeId === currentUser?.userId &&
+          task.status !== 'DONE'
+      )
       .map((task) => ({
         ...task,
         projectId: project.id,
@@ -38,11 +54,29 @@ function ProjectListPage() {
       }))
   )
 
+  if (isLoading) {
+    return (
+      <div className="project-list-page">
+        <Loading />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="project-list-page">
+        <ErrorMessage message={error} />
+      </div>
+    )
+  }
+
   return (
     <div className="project-list-page">
+      {/* Dashboard Header */}
       <div className="project-list-header">
         <div>
           <h1>프로젝트 대시보드</h1>
+
           <p>
             전체 프로젝트의 진행 현황을 한눈에 확인하세요.
           </p>
@@ -57,6 +91,7 @@ function ProjectListPage() {
         </button>
       </div>
 
+      {/* Summary */}
       <div className="dashboard-summary">
         <div className="dashboard-summary-card">
           <div className="dashboard-summary-icon">
@@ -92,6 +127,7 @@ function ProjectListPage() {
         </div>
       </div>
 
+      {/* Recent Projects */}
       <section className="dashboard-section">
         <div className="dashboard-section-header">
           <div>
@@ -120,7 +156,10 @@ function ProjectListPage() {
           <div className="dashboard-panel-header">
             <div>
               <h2>내 작업</h2>
-              <p>내가 담당하고 있는 작업을 확인하세요.</p>
+
+              <p>
+                내가 담당하고 있는 작업을 확인하세요.
+              </p>
             </div>
 
             <span className="dashboard-my-task-count">
@@ -149,7 +188,10 @@ function ProjectListPage() {
                     className={`dashboard-task-badge ${task.status.toLowerCase()}`}
                   >
                     {task.status === 'TODO' && 'To Do'}
-                    {task.status === 'IN_PROGRESS' && 'In Progress'}
+
+                    {task.status === 'IN_PROGRESS' &&
+                      'In Progress'}
+
                     {task.status === 'DONE' && 'Done'}
                   </span>
                 </Link>
@@ -163,7 +205,10 @@ function ProjectListPage() {
           <div className="dashboard-panel-header">
             <div>
               <h2>최근 업데이트</h2>
-              <p>프로젝트별 최근 변경 내역입니다.</p>
+
+              <p>
+                프로젝트별 최근 변경 내역입니다.
+              </p>
             </div>
           </div>
 

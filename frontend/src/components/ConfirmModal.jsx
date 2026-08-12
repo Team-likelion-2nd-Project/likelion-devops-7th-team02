@@ -1,4 +1,9 @@
-import { AlertTriangle, X } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import {
+  AlertTriangle,
+  X,
+} from 'lucide-react'
+
 import './ConfirmModal.css'
 
 function ConfirmModal({
@@ -11,7 +16,7 @@ function ConfirmModal({
 }) {
   if (!isOpen) return null
 
-  return (
+  return createPortal(
     <div
       className="confirm-modal-overlay"
       onMouseDown={onCancel}
@@ -20,6 +25,7 @@ function ConfirmModal({
         className="confirm-modal"
         onMouseDown={(event) => event.stopPropagation()}
       >
+        {/* Header */}
         <div className="confirm-modal-header">
           <div className="confirm-modal-icon">
             <AlertTriangle size={20} />
@@ -40,6 +46,7 @@ function ConfirmModal({
           </button>
         </div>
 
+        {/* Actions */}
         <div className="confirm-modal-actions">
           <button
             type="button"
@@ -58,7 +65,8 @@ function ConfirmModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

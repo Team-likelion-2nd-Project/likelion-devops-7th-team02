@@ -34,14 +34,32 @@ function TaskCard({
     setIsDeleteOpen(true)
   }
 
-  const handleEditSave = ({
+  const handleEditSave = async ({
     title,
     status,
-    assignee,
+    assigneeId,
   }) => {
-    onTitleChange(task.id, title)
-    onStatusChange(task.id, status)
-    onAssigneeChange(task.id, assignee)
+    if (status !== task.status) {
+      await onStatusChange(
+        task.id,
+        status
+      )
+    }
+
+    if (
+      assigneeId !== null &&
+      assigneeId !== task.assigneeId
+    ) {
+      await onAssigneeChange(
+        task.id,
+        assigneeId
+      )
+    }
+
+    // 제목 수정 API는 아직 없으므로 로컬에서만 변경
+    if (title !== task.title) {
+      onTitleChange(task.id, title)
+    }
   }
 
   const handleDeleteConfirm = () => {

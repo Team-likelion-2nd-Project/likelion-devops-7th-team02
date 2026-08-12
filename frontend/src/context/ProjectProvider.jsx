@@ -1,25 +1,152 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import ProjectContext from './ProjectContext'
-import { projects } from '../mocks/projects'
+import {
+  createProject as createProjectApi,
+  getProjects,
+} from '../api/projectApi'
+import { getMembers } from '../api/memberApi'
+import { getTasks } from '../api/taskApi'
+import { getMe } from '../api/userApi'
+
+function formatProjectDate(value) {
+  if (!value) return '-'
+
+  const date = new Date(value)
+  const today = new Date()
+
+  const dateOnly = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  )
+
+  const todayOnly = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  )
+
+  const diffDays = Math.round(
+    (todayOnly - dateOnly) / (1000 * 60 * 60 * 24)
+  )
+
+  if (diffDays === 0) return '오늘'
+  if (diffDays === 1) return '어제'
+
+  return `${date.getMonth() + 1}.${date.getDate()}`
+}
+
+function normalizeProject(project) {
+  return {
+    ...project,
+    members: project.members ?? [],
+    tasks: project.tasks ?? [],
+    updatedAt: formatProjectDate(
+      project.updatedAt ?? project.createdAt
+    ),
+  }
+}
 
 function ProjectProvider({ children }) {
-  const [projectList, setProjectList] = useState(projects)
+  const [projectList, setProjectList] = useState([])
+  const [currentUser, setCurrentUser] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const createProject = ({ name, description }) => {
-    const newProject = {
-      id: Date.now(),
+  useEffect(() => {
+    let cancelled = false
+
+    const loadDashboardData = async () => {
+      try {
+        const [
+          projectResponse,
+          userResponse,
+        ] = await Promise.all([
+          getProjects(),
+          getMe(),
+        ])
+
+        const projects =
+          projectResponse.data.data ?? []
+
+        const user =
+          userResponse.data.data ?? null
+
+        const projectsWithDetails =
+          await Promise.all(
+            projects.map(async (project) => {
+              const [
+                memberResponse,
+                taskResponse,
+              ] = await Promise.all([
+                getMembers(project.id),
+                getTasks(project.id),
+              ])
+
+              return normalizeProject({
+                ...project,
+                members:
+                  memberResponse.data.data ?? [],
+                tasks:
+                  taskResponse.data.data ?? [],
+              })
+            })
+          )
+
+        if (cancelled) return
+
+        setCurrentUser(user)
+        setProjectList(projectsWithDetails)
+      } catch (error) {
+        if (cancelled) return
+
+        setError(
+          error.response?.data?.message ??
+            '프로젝트 정보를 불러오지 못했습니다.'
+        )
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+    loadDashboardData()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const createProject = async ({
+    name,
+    description,
+  }) => {
+    const response = await createProjectApi({
       name,
       description,
-      memberCount: 0,
-      taskCount: 0,
-      updatedAt: '방금 전',
-      members: [],
-      tasks: [],
-    }
+    })
+
+    const project = response.data.data
+
+    const [
+      memberResponse,
+      taskResponse,
+    ] = await Promise.all([
+      getMembers(project.id),
+      getTasks(project.id),
+    ])
+
+    const newProject = normalizeProject({
+      ...project,
+      members:
+        memberResponse.data.data ?? [],
+      tasks:
+        taskResponse.data.data ?? [],
+    })
 
     setProjectList((prevProjects) => [
-      ...prevProjects,
       newProject,
+      ...prevProjects,
     ])
 
     return newProject
@@ -29,6 +156,9 @@ function ProjectProvider({ children }) {
     <ProjectContext.Provider
       value={{
         projectList,
+        currentUser,
+        isLoading,
+        error,
         createProject,
       }}
     >

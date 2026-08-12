@@ -6,13 +6,16 @@ import {
   Plus,
   Users,
 } from 'lucide-react'
-import ProjectContext from '../context/ProjectContext'
+
 import ProjectCreateModal from './ProjectCreateModal'
+import ProjectContext from '../context/ProjectContext'
+
 import './Sidebar.css'
 
 function Sidebar() {
   const location = useLocation()
   const { projectList } = useContext(ProjectContext)
+
   const [isCreateOpen, setIsCreateOpen] = useState(false)
 
   const projectId = Number(
@@ -23,8 +26,12 @@ function Sidebar() {
     (project) => project.id === projectId
   )
 
+  const currentProjectMemberCount =
+    currentProject?.members?.length ?? 0
+
   return (
     <aside className="main-sidebar">
+      {/* Project List */}
       <div className="sidebar-section">
         <div className="sidebar-section-header">
           <span>프로젝트</span>
@@ -57,7 +64,9 @@ function Sidebar() {
         </nav>
       </div>
 
+      {/* Sidebar Bottom */}
       <div className="sidebar-bottom">
+        {/* Project Team */}
         <div className="sidebar-team-card">
           <div className="sidebar-team-header">
             <div className="sidebar-team-icon">
@@ -71,13 +80,18 @@ function Sidebar() {
 
               <span>
                 {currentProject
-                  ? `${currentProject.members?.length ?? 0} members`
+                  ? `${currentProjectMemberCount} ${
+                      currentProjectMemberCount === 1
+                        ? 'member'
+                        : 'members'
+                    }`
                   : '프로젝트를 선택하세요'}
               </span>
             </div>
           </div>
         </div>
 
+        {/* Storage */}
         <div className="sidebar-storage">
           <div className="sidebar-storage-header">
             <div>
