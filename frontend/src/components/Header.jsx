@@ -7,9 +7,11 @@ import {
   LogOut,
   Search,
   Settings,
+  UserRound,
 } from 'lucide-react'
 
 import ProjectContext from '../context/ProjectContext'
+import ProfileModal from './ProfileModal'
 
 import './Header.css'
 
@@ -17,14 +19,20 @@ function Header() {
   const navigate = useNavigate()
   const { currentUser } = useContext(ProjectContext)
 
-  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [isProfileMenuOpen, setIsProfileMenuOpen] =
+    useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] =
+    useState(false)
 
-  const accessToken = localStorage.getItem('accessToken')
+  const accessToken =
+    localStorage.getItem('accessToken')
+
   const hasToken = Boolean(accessToken)
-  const isLoggedIn = Boolean(hasToken && currentUser)
+  const isLoggedIn =
+    Boolean(hasToken && currentUser)
 
   const handleLogin = () => {
-    setIsProfileOpen(false)
+    setIsProfileMenuOpen(false)
     navigate('/login')
   }
 
@@ -32,139 +40,169 @@ function Header() {
     localStorage.removeItem('accessToken')
     localStorage.removeItem('tokenType')
 
-    setIsProfileOpen(false)
+    setIsProfileMenuOpen(false)
+    setIsProfileModalOpen(false)
+
     navigate('/login')
   }
 
+  const handleProfileOpen = () => {
+    setIsProfileMenuOpen(false)
+    setIsProfileModalOpen(true)
+  }
+
   return (
-    <header className="main-header">
-      {/* Logo */}
-      <div className="main-header-left">
-        <Link
-          to={hasToken ? '/projects' : '/login'}
-          className="main-header-logo"
-        >
-          <div className="main-header-logo-icon">
-            D
-          </div>
+    <>
+      <header className="main-header">
+        {/* Logo */}
+        <div className="main-header-left">
+          <Link
+            to={hasToken ? '/projects' : '/login'}
+            className="main-header-logo"
+          >
+            <div className="main-header-logo-icon">
+              D
+            </div>
 
-          <strong>DevFlow</strong>
-        </Link>
-      </div>
+            <strong>DevFlow</strong>
+          </Link>
+        </div>
 
-      {/* Search */}
-      <div className="main-header-search">
-        <Search size={18} />
+        {/* Search */}
+        <div className="main-header-search">
+          <Search size={18} />
 
-        <input
-          type="search"
-          placeholder="검색..."
-          aria-label="검색"
-        />
-      </div>
+          <input
+            type="search"
+            placeholder="검색..."
+            aria-label="검색"
+          />
+        </div>
 
-      {/* Header Actions */}
-      <div className="main-header-actions">
-        <button
-          type="button"
-          className="main-header-icon-button"
-          aria-label="알림"
-        >
-          <Bell size={19} />
-        </button>
-
-        <button
-          type="button"
-          className="main-header-icon-button"
-          aria-label="설정"
-        >
-          <Settings size={19} />
-        </button>
-
-        {/* Profile */}
-        <div className="main-header-profile">
+        {/* Header Actions */}
+        <div className="main-header-actions">
           <button
             type="button"
-            className="main-header-profile-button"
-            onClick={() =>
-              setIsProfileOpen((prev) => !prev)
-            }
+            className="main-header-icon-button"
+            aria-label="알림"
           >
-            <div className="main-header-avatar">
-              {isLoggedIn
-                ? currentUser.name.charAt(0)
-                : 'U'}
-            </div>
-
-            <div className="main-header-user-info">
-              <strong>
-                {!hasToken
-                  ? '로그인이 필요합니다'
-                  : currentUser
-                    ? currentUser.name
-                    : '사용자 정보 확인 중...'}
-              </strong>
-
-              <span>
-                {isLoggedIn
-                  ? currentUser.email
-                  : ''}
-              </span>
-            </div>
-
-            <ChevronDown size={15} />
+            <Bell size={19} />
           </button>
 
-          {isProfileOpen && (
-            <div className="profile-menu">
-              <div className="profile-menu-user">
-                <div className="profile-menu-avatar">
-                  {isLoggedIn
-                    ? currentUser.name.charAt(0)
-                    : 'U'}
-                </div>
+          <button
+            type="button"
+            className="main-header-icon-button"
+            aria-label="설정"
+          >
+            <Settings size={19} />
+          </button>
 
-                <div>
-                  <strong>
-                    {isLoggedIn
-                      ? currentUser.name
-                      : '로그인이 필요합니다'}
-                  </strong>
-
-                  <span>
-                    {isLoggedIn
-                      ? currentUser.email
-                      : '로그인 후 이용해주세요.'}
-                  </span>
-                </div>
+          {/* Profile */}
+          <div className="main-header-profile">
+            <button
+              type="button"
+              className="main-header-profile-button"
+              onClick={() =>
+                setIsProfileMenuOpen(
+                  (prev) => !prev
+                )
+              }
+            >
+              <div className="main-header-avatar">
+                {isLoggedIn
+                  ? currentUser.name.charAt(0)
+                  : 'U'}
               </div>
 
-              <div className="profile-menu-divider" />
+              <div className="main-header-user-info">
+                <strong>
+                  {!hasToken
+                    ? '로그인이 필요합니다'
+                    : currentUser
+                      ? currentUser.name
+                      : '사용자 정보 확인 중...'}
+                </strong>
 
-              {isLoggedIn ? (
-                <button
-                  type="button"
-                  className="profile-menu-logout"
-                  onClick={handleLogout}
-                >
-                  <LogOut size={17} />
-                  로그아웃
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="profile-menu-login"
-                  onClick={handleLogin}
-                >
-                  <LogIn size={17} />
-                  로그인
-                </button>
-              )}
-            </div>
-          )}
+                <span>
+                  {isLoggedIn
+                    ? currentUser.email
+                    : ''}
+                </span>
+              </div>
+
+              <ChevronDown size={15} />
+            </button>
+
+            {isProfileMenuOpen && (
+              <div className="profile-menu">
+                <div className="profile-menu-user">
+                  <div className="profile-menu-avatar">
+                    {isLoggedIn
+                      ? currentUser.name.charAt(0)
+                      : 'U'}
+                  </div>
+
+                  <div>
+                    <strong>
+                      {isLoggedIn
+                        ? currentUser.name
+                        : '로그인이 필요합니다'}
+                    </strong>
+
+                    <span>
+                      {isLoggedIn
+                        ? currentUser.email
+                        : '로그인 후 이용해주세요.'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="profile-menu-divider" />
+
+                {isLoggedIn ? (
+                  <>
+                    <button
+                      type="button"
+                      className="profile-menu-item"
+                      onClick={handleProfileOpen}
+                    >
+                      <UserRound size={17} />
+                      내 프로필
+                    </button>
+
+                    <button
+                      type="button"
+                      className="profile-menu-logout"
+                      onClick={handleLogout}
+                    >
+                      <LogOut size={17} />
+                      로그아웃
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="profile-menu-login"
+                    onClick={handleLogin}
+                  >
+                    <LogIn size={17} />
+                    로그인
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        user={currentUser}
+        onClose={() =>
+          setIsProfileModalOpen(false)
+        }
+      />
+    </>
   )
 }
 
