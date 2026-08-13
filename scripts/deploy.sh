@@ -24,7 +24,19 @@ kubectl apply -f k8s/frontend/service.yaml
 kubectl apply -f k8s/frontend/deployment.yaml
 
 kubectl apply -f k8s/backend/serviceaccount.yaml
-kubectl apply -f k8s/backend/configmap.yaml
+
+echo "=== Apply Backend ConfigMap ==="
+
+: "${RDS_HOST:?RDS_HOST CI/CD variable is required}"
+
+kubectl create configmap backend-config \
+  -n "$NAMESPACE" \
+  --from-literal=DB_URL="jdbc:postgresql://${RDS_HOST}:5432/deflow_db" \
+  --from-literal=JWT_EXPIRATION="3600000" \
+  --from-literal=SERVER_PORT="8080" \
+  --from-literal=SPRING_PROFILES_ACTIVE="dev" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
 kubectl apply -f k8s/backend/service.yaml
 kubectl apply -f k8s/backend/deployment.yaml
 kubectl apply -f k8s/backend/hpa.yaml
