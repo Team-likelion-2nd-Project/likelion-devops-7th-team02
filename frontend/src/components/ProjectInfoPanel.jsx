@@ -19,8 +19,8 @@ function ProjectInfoPanel({
         </div>
 
         <div className="project-info-row">
-          <span>최근 업데이트</span>
-          <strong>{project.updatedAt}</strong>
+          <span>프로젝트 생성일</span>
+          <strong>{project.createAt}</strong>
         </div>
       </div>
     </section>
