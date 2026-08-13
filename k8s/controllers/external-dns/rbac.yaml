@@ -1,0 +1,65 @@
+# ExternalDNS - RBAC (ClusterRole + ClusterRoleBinding)
+#
+# 프로젝트 계약
+#   Source          : ingress  (--source=ingress 만 사용)
+#   Namespace       : external-dns
+#   ServiceAccount  : external-dns
+#
+# 권한 범위 근거
+#   * ExternalDNS 가 --source=ingress 로 동작하므로 Ingress 객체
+#     (networking.k8s.io) 에 대한 read 권한이 기능상 필수이다.
+#   * nodes + namespaces read 권한은 ExternalDNS 가 기동 시 annotation /
+#     label selector 를 해석하고 cluster 전체 discovery 를 수행하기 때문에 유지한다.
+#   * 읽기 전용 verb(get/list/watch) 만 사용한다. ExternalDNS 는 Kubernetes
+#     객체를 변경하지 않으며, DNS 변경은 IRSA Role 을 사용해 Route53 API 로
+#     수행한다(serviceaccount.yaml 참고).
+#   * 폐기된 extensions/v1beta1 Ingress 그룹은 의도적으로 제외했다
+#     (Kubernetes 1.36 은 Ingress 를 networking.k8s.io/v1 로만 제공).
+#
+# 설치 방식: kubectl + YAML manifest 만 사용한다. Helm 은 사용하지 않는다.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: external-dns
+  labels:
+    app.kubernetes.io/name: external-dns
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: devflow
+    app.kubernetes.io/managed-by: kubectl
+rules:
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: external-dns-viewer
+  labels:
+    app.kubernetes.io/name: external-dns
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: devflow
+    app.kubernetes.io/managed-by: kubectl
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: external-dns
+subjects:
+  - kind: ServiceAccount
+    name: external-dns
+    namespace: external-dns

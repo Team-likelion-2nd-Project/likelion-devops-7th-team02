@@ -1,3 +1,6 @@
+# Application ACM 모듈 출력값
+# 현재 Ingress 는 certificate discovery 를 쓰므로 이 ARN 을 YAML 에 넣지 않아도 된다.
+
 output "certificate_arn" {
   description = "ACM Certificate ARN for the application domain (team02-app.manoit.co.kr). Use this in Kubernetes Ingress annotation: alb.ingress.kubernetes.io/certificate-arn"
   value       = aws_acm_certificate.this.arn

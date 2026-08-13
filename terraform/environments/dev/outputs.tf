@@ -1,3 +1,6 @@
+# dev 환경 출력값. 배포 후 Kubernetes YAML 의 placeholder 를 채울 때 사용한다.
+#   terraform -chdir=terraform/environments/dev output -raw <이름>
+
 output "vpc_id" {
   description = "VPC ID"
   value       = module.network.vpc_id

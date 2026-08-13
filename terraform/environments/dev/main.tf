@@ -1,3 +1,6 @@
+# dev 환경 루트: 각 모듈을 조합해 DevFlow 인프라를 구성한다.
+
+# VPC / Subnet / NAT / Route Table
 module "network" {
   source = "../../modules/network"
 
@@ -11,6 +14,7 @@ module "network" {
   eks_cluster_name         = "${var.project_name}-${var.environment}"
 }
 
+# ALB / GitLab / EKS Node / RDS 용 Security Group
 module "security" {
   source = "../../modules/security"
 
@@ -20,6 +24,7 @@ module "security" {
   eks_node_security_group_id = ""
 }
 
+# GitLab EC2 (Public Subnet)
 module "gitlab" {
   source = "../../modules/gitlab"
 
@@ -33,6 +38,7 @@ module "gitlab" {
   gitlab_hostname   = var.gitlab_hostname
 }
 
+# GitLab 전용 ALB (Application ALB 와 별개)
 module "gitlab-alb" {
   source = "../../modules/gitlab-alb"
 
@@ -47,12 +53,14 @@ module "gitlab-alb" {
   certificate_arn = var.certificate_arn
 }
 
-# connect Gitlab_ALB -> Route53
+# 기존 manoit.co.kr public hosted zone 조회 (여러 모듈에서 재사용)
 data "aws_route53_zone" "main" {
   name         = "manoit.co.kr"
   private_zone = false
 }
 
+# GitLab DNS: team02-gitlab.manoit.co.kr -> GitLab ALB
+# (Application 도메인과 달리 ExternalDNS 가 아니라 Terraform 이 관리한다)
 resource "aws_route53_record" "gitlab" {
   zone_id = data.aws_route53_zone.main.zone_id
   name    = "team02-gitlab.manoit.co.kr"
@@ -65,6 +73,7 @@ resource "aws_route53_record" "gitlab" {
   }
 }
 
+# ExternalDNS 용 IAM Role/Policy (IRSA)
 module "external_dns_iam" {
   source = "../../modules/external-dns-iam"
 
@@ -73,10 +82,11 @@ module "external_dns_iam" {
   oidc_provider_arn = module.eks.oidc_provider_arn
   oidc_issuer_url   = module.eks.oidc_provider_url
 
-  # Reuse the existing manoit.co.kr public hosted zone already looked up above (data.aws_route53_zone.main).
+  # 위에서 조회한 manoit.co.kr public hosted zone 을 재사용한다.
   hosted_zone_id = data.aws_route53_zone.main.zone_id
 }
 
+# RDS PostgreSQL (Private DB Subnet)
 module "rds" {
   source = "../../modules/rds"
 
@@ -93,6 +103,7 @@ module "rds" {
   multi_az          = var.db_multiaz
 }
 
+# EKS 클러스터 + Managed Node Group (Node 2~4)
 module "eks" {
   source = "../../modules/eks"
 
@@ -109,6 +120,7 @@ module "eks" {
   node_max_size              = 4
 }
 
+# AWS Load Balancer Controller 용 IAM Role/Policy (IRSA)
 module "alb_controller_iam" {
   source = "../../modules/alb-controller-iam"
 
@@ -118,10 +130,8 @@ module "alb_controller_iam" {
   oidc_issuer_url   = module.eks.oidc_provider_url
 }
 
-# --- Application ACM (team02-app.manoit.co.kr) ---------------------------------
-# Phase 6: HTTPS 기반 Application 인증서. DNS 검증 방식으로, 기존 manoit.co.kr
-# public hosted zone(data.aws_route53_zone.main)을 재사용한다.
-# GitLab DNS(team02-gitlab.manoit.co.kr), GitLab ALB, GitLab ACM은 절대 수정하지 않는다.
+# Application ACM 인증서 (team02-app.manoit.co.kr, DNS 검증)
+# GitLab 쪽 DNS/ALB/ACM 은 건드리지 않는다.
 module "application_acm" {
   source = "../../modules/application-acm"
 
@@ -131,6 +141,7 @@ module "application_acm" {
   hosted_zone_id = data.aws_route53_zone.main.zone_id
 }
 
+# GitLab Runner 가 kubeconfig 를 갱신할 수 있도록 eks:DescribeCluster 만 허용
 resource "aws_iam_role_policy" "gitlab_eks_describe" {
   name = "gitlab-eks-describe"
   role = module.gitlab.iam_role_name

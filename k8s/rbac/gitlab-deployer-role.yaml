@@ -1,0 +1,123 @@
+# Role/gitlab-deployer-role  (Namespace: devflow)
+#
+# Namespace 범위 Role 만 사용한다. gitlab-deployer 용 ClusterRole 은 존재하지
+# 않으므로 CI identity 는 devflow Namespace 밖의 어떤 것도 조회/변경할 수 없다
+# (kube-system, external-dns, 다른 Namespace, 그리고 node·Namespace·IngressClass·
+# CRD·PV 같은 cluster 범위 객체는 모두 접근 불가).
+#
+# 이 권한 범위의 근거 (가정이 아니라 실제 확인)
+#   .gitlab-ci.yml 의 stage 는 현재 build, test, image 뿐이다. 이미지를 빌드/푸시
+#   ($CI_REGISTRY_IMAGE/{frontend,backend}:$CI_COMMIT_SHORT_SHA,
+#   .gitlab-ci.yml:47-48,56-57)할 뿐 deploy stage 가 없다. 저장소 전체를 검색해도
+#   `kubectl` / `kubeconfig` / `rollout` / `set image` 사용이 없다
+#   (.gitlab-ci.yml, .github/workflows/ci.yml, scripts/ 나 .gitlab/ 디렉터리 없음).
+#   => 따라서 이 Role 은 관측된 명령이 아니라 "의도된 파이프라인" 기준의 최소
+#      image deployer 계약이다. 최초 리소스 생성은 Cloud 담당자의 수동 작업으로 남는다.
+#
+# 의도된 CI 명령과 이를 허용하는 rule 대응
+#   kubectl -n devflow set image deployment/backend  backend=<img>   -> rule 2 (이름 지정 get+patch)
+#   kubectl -n devflow set image deployment/frontend frontend=<img>  -> rule 2
+#   kubectl -n devflow rollout status deployment/backend             -> rule 1 (collection list+watch)
+#   kubectl -n devflow rollout restart deployment/frontend           -> rule 2 (이름 지정 patch)
+#   kubectl -n devflow get pods / get rs                             -> rule 3, 4
+#
+# 읽기 rule 과 쓰기 rule 을 분리한 이유 (형식이 아니라 실제 RBAC 동작 때문)
+#   RBAC 의 resourceNames 는 특정 이름의 객체를 지정하는 요청(get/update/patch/
+#   delete)에만 적용된다. collection 요청(list/watch)은 resourceNames 가 붙은
+#   rule 로는 허용되지 않으며 fieldSelector 를 써도 마찬가지다.
+#   `kubectl rollout status` 는 list+watch 를 수행하므로, resourceNames 로만
+#   제한된 단일 rule 을 쓰면 rollout 확인이 깨진다. 그래서 다음과 같이 나눈다.
+#     rule 1: collection 읽기, resourceNames 없음  (rollout status 에 필요)
+#     rule 2: 쓰기, resourceNames [frontend, backend] 로 제한
+#   결과적으로 CI 는 Namespace 를 조회할 수는 있지만 실제로 수정할 수 있는 것은
+#   두 개의 애플리케이션 Deployment 뿐이며, 이후 추가되는 무관한 Deployment 는
+#   읽기 전용이다.
+#
+# 의도적으로 부여하지 않은 권한 (필요성이 입증될 때만 추가하고, "혹시 몰라서"는 금지)
+#   * 모든 리소스에 대한 create / delete / deletecollection - CI 는 기존 객체를
+#     업데이트할 뿐 리소스를 만들거나 삭제하지 않는다
+#   * deployments/scale 및 spec.replicas 에 대한 모든 쓰기 - replica 수는
+#     HorizontalPodAutoscaler/backend-hpa (k8s/backend/hpa.yaml)의 소유다. CI 가
+#     autoscaler 와 충돌하면 안 된다. `set image` 는 Pod template 만 patch 한다.
+#   * secrets - verb 자체를 주지 않는다(get/list 조차 없음). Secret/backend-secret
+#     과 Secret/gitlab-registry-secret 은 별도의 안전한 경로로 생성한다.
+#     이미지 배포 권한과 Secret 관리 권한은 분리한다. 이 Namespace 에서 secrets
+#     get 권한을 주면 모든 CI job 에 DB 비밀번호와 JWT secret 이 노출된다.
+#   * configmaps, services, ingresses, serviceaccounts, hpa - 쓰기 권한 없음.
+#     따라서 CI 가 Ingress 라우팅을 바꾸거나 backend-config 를 수정하거나 HPA 를
+#     비활성화할 수 없다
+#   * roles / rolebindings / clusterroles / clusterrolebindings - 권한 상승 차단
+#     (CI 가 스스로 권한을 넓힐 수 없다)
+#   * pods/exec, pods/attach, pods/portforward - 실행 중인 Pod 로 shell 접속 불가,
+#     Pod 를 통한 RDS 터널링 불가
+#   * pods/log - 현재 CI 코드 어디에도 `kubectl logs` 가 없으므로 의도적으로
+#     제외했다. 이후 파이프라인에 장애 진단이 필요해지면 딱 이만큼만 추가한다.
+#         - apiGroups: [""]
+#           resources: ["pods/log"]
+#           verbs: ["get"]
+#   * events - 의도된 명령에 필요하지 않다
+#   * wildcard - apiGroups, resources, verbs 어디에도 "*" 가 없다
+#   * 내장 cluster-admin / admin / edit ClusterRole 은 절대 바인딩하지 않는다
+#
+# 이후 파이프라인이 `kubectl apply -f k8s/` 방식으로 바뀐다면
+#   여러 리소스 타입에 대한 create/patch 권한이 필요해지고 HPA/replicas 충돌도
+#   다시 발생한다. 이 Role 을 조용히 넓히지 말고
+#   "CI 가 더 넓은 manifest 배포 권한을 요구함 - 보안 설계 결정 필요" 로 보고한 뒤
+#   의식적으로 결정한다.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gitlab-deployer-role
+  namespace: devflow
+  labels:
+    app.kubernetes.io/name: gitlab-deployer
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: devflow
+    app.kubernetes.io/managed-by: kubectl
+rules:
+  # rule 1 - Namespace 전체의 Deployment 읽기 (resourceNames 를 두지 않아야
+  # `kubectl rollout status` 가 사용하는 collection list+watch 가 허용된다).
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - list
+      - watch
+
+  # rule 2 - 애플리케이션 Deployment 두 개만 수정 (이미지 업데이트, rollout
+  # restart). create 없음, delete 없음, scale subresource 없음.
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    resourceNames:
+      - frontend
+      - backend
+    verbs:
+      - get
+      - patch
+      - update
+
+  # rule 3 - ReplicaSet 읽기 전용: rollout 진행 상황과 이력을 여기서 확인한다.
+  - apiGroups:
+      - apps
+    resources:
+      - replicasets
+    verbs:
+      - get
+      - list
+      - watch
+
+  # rule 4 - Pod 읽기 전용: 새 Pod 가 Running/Ready 인지 확인한다.
+  # create/patch/delete 없음. Pod 는 Deployment controller 가 소유한다.
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+      - watch

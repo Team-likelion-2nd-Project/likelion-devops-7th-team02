@@ -1,3 +1,5 @@
+# RDS 모듈 입력 변수 (db_password 는 sensitive 값이므로 코드에 하드코딩하지 않는다)
+
 variable "project_name" {
   description = "Project name"
   type        = string

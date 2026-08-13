@@ -1,0 +1,36 @@
+# RoleBinding/gitlab-deployer-rolebinding  (Namespace: devflow)
+#
+# 정확히 하나의 subject 를 정확히 하나의 Namespace 범위 Role 에 연결한다.
+#   ServiceAccount/gitlab-deployer (devflow)   k8s/rbac/serviceaccounts.yaml
+#     -> Role/gitlab-deployer-role (devflow)   k8s/rbac/gitlab-deployer-role.yaml
+#
+# Role 을 참조하는 RoleBinding 은 해당 권한을 이 Namespace 안에서만 부여한다.
+# gitlab-deployer 용 ClusterRoleBinding 은 존재하지 않으며, 내장 ClusterRole
+# (cluster-admin / admin / edit)도 바인딩하지 않는다.
+#
+# 필드 관련 참고
+#   roleRef.apiGroup 은 rbac.authorization.k8s.io 여야 하고, roleRef 는 생성 후
+#   변경할 수 없다. Role 을 바꾸려면 이 RoleBinding 을 삭제 후 재생성해야 한다.
+#   ServiceAccount subject 에는 subjects[].namespace 가 필수다.
+#
+# Group 이나 User subject 는 추가하지 않는다. CI ServiceAccount 만 이 권한을
+# 가지므로 사람이나 외부 identity 가 암묵적으로 권한을 상속받지 않는다.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-deployer-rolebinding
+  namespace: devflow
+  labels:
+    app.kubernetes.io/name: gitlab-deployer
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: devflow
+    app.kubernetes.io/managed-by: kubectl
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-deployer
+    namespace: devflow
+roleRef:
+  kind: Role
+  name: gitlab-deployer-role
+  apiGroup: rbac.authorization.k8s.io

@@ -1,3 +1,5 @@
+# ExternalDNS IAM 모듈 입력 변수 (oidc_* 값은 EKS 모듈 출력에서 받는다)
+
 variable "project_name" {
   description = "Project name used for resource naming and tagging"
   type        = string

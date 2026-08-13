@@ -1,0 +1,67 @@
+# ConfigMap/backend-config  (Namespace: devflow)
+#
+# 아래 key 는 모두 애플리케이션이 실제로 읽는 변수다. backend/ 의 실제 소스에서
+# 확인했으며 임의로 만들어낸 변수는 없다.
+#
+#   SPRING_PROFILES_ACTIVE  backend/src/main/resources/application.yml:6
+#                           spring.profiles.active: ${SPRING_PROFILES_ACTIVE:local}
+#   SERVER_PORT             application.yml:17  server.port: ${SERVER_PORT:8080}
+#   DB_URL                  application-dev.yml:3 / application-prod.yml:3
+#                           spring.datasource.url: ${DB_URL}   (전체 JDBC URL)
+#   JWT_EXPIRATION          application.yml:28  jwt.expiration: ${JWT_EXPIRATION:3600000}
+#
+#   backend/README.md:391-401 에도 Kubernetes 연동 계약으로 문서화되어 있다.
+#
+# 비밀 값 성격의 변수(DB_USERNAME, DB_PASSWORD, JWT_SECRET)는 여기에 두지 않는다.
+# 해당 값은 Secret/backend-secret 에 있다 - k8s/backend/secret.example.yaml 참고.
+#
+# ---------------------------------------------------------------------------
+# DB_URL 은 host 가 아니라 전체 JDBC URL 이다
+#   application-dev.yml / application-prod.yml 이 ${DB_URL} 을
+#   spring.datasource.url 에 그대로 주입하므로, 이를 DB_HOST / DB_PORT / DB_NAME
+#   으로 쪼개면 애플리케이션이 읽지도 않는 변수만 만들게 된다.
+#   (docs/architecture.md:102 에는 DB_HOST/DB_PORT/DB_NAME 이 적혀 있으나 실제
+#    소스와 다르므로 소스를 따랐다. 이 불일치는 조용히 맞추지 않고 보고했다.)
+#
+# Terraform apply 이후 교체해야 할 placeholder (AWS 아직 미배포):
+#   <RDS_ENDPOINT>  포트를 제외한 RDS HOST 주소만 넣는다.
+#                   주의: terraform output `rds_endpoint` 는
+#                   aws_db_instance.endpoint 이며 이미 "host:5432" 형태다
+#                   (terraform/modules/rds/main.tf:45-48). 치환 전에 ":5432" 를
+#                   제거해야 하며, 그러지 않으면 URL 이 ":5432:5432" 로 끝난다.
+#                     terraform -chdir=terraform/environments/dev output -raw rds_endpoint
+#   <DB_NAME>       RDS 초기 데이터베이스 이름 (terraform 변수 db_name, 현재
+#                   terraform/environments/dev/variables.tf:36-40 에서 기본값이
+#                   "deflow_db" 이다 - "deflow"/"devflow" 오타로 보인다. 실제
+#                   RDS 에 생성된 이름을 사용하고 "devflow" 라고 단정하지 않는다).
+#
+# Profile 선택: dev
+#   application-dev.yml 이 존재하며 Terraform "dev" 환경에 대응한다. dev 와 prod
+#   는 Hikari pool 크기만 다르고, 둘 다 DB_URL/DB_USERNAME/DB_PASSWORD 를 요구하며
+#   ddl-auto: validate 를 사용한다.
+#
+# 경고(스키마): dev 와 prod profile 은 `ddl-auto: validate` 를 사용하고
+# (application-dev.yml:15, application-prod.yml:16) 프로젝트에 Flyway/Liquibase
+# 의존성이 없다(backend/build.gradle). 따라서 RDS 에 users / projects /
+# project_members / tasks 테이블이 미리 존재해야 하며, 없으면 Pod 가 기동 시
+# "Schema-validation: missing table [...]" 으로 실패한다.
+# 이는 애플리케이션/DB 초기화 작업이며 YAML 로 해결할 수 있는 문제가 아니다.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: devflow
+  labels:
+    app: backend
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: devflow
+    app.kubernetes.io/managed-by: kubectl
+data:
+  SPRING_PROFILES_ACTIVE: "dev"
+  SERVER_PORT: "8080"
+  # jdbc:postgresql://<포트를-제외한-host>:5432/<데이터베이스-이름>
+  DB_URL: "jdbc:postgresql://<RDS_ENDPOINT>:5432/<DB_NAME>"
+  # 3600000 ms = 1시간 (application.yml:28 기본값을 명시적으로 유지)
+  JWT_EXPIRATION: "3600000"

@@ -1,0 +1,146 @@
+# ExternalDNS - Deployment
+#
+# 프로젝트 계약
+#   EKS 클러스터    : devflow-dev-eks   (Kubernetes 1.36, ap-northeast-1)
+#   Namespace       : external-dns
+#   ServiceAccount  : external-dns   (IRSA - serviceaccount.yaml 참고)
+#   Provider        : aws
+#   Source          : ingress
+#   Policy          : upsert-only     (기존 Route53 record 를 삭제하지 않음)
+#   Registry        : txt
+#   TXT owner id    : devflow-dev-eks
+#   Domain filter   : team02-app.manoit.co.kr   (public hosted zone)
+#   Region          : ap-northeast-1
+#
+#   ExternalDNS 관리 대상이 아님: team02-gitlab.manoit.co.kr
+#   (GitLab DNS/ALB 는 이 Controller 가 아니라 Terraform 이 생성한다.)
+#
+# AWS + EKS 배포 후 Runtime 흐름:
+#   Ingress (devflow app) -> ExternalDNS -> Route53 -> team02-app.manoit.co.kr
+#
+# 상태: AWS 인프라가 아직 배포되지 않았다. 이 manifest 는 사전에 준비만 되었고
+#   어떤 클러스터에도 apply 되지 않았다.
+#
+# 보안
+#   * AWS 자격증명은 오직 IRSA(projected service account token)로만 제공된다.
+#   * static AWS key 없음, credential Secret 없음, hostPath 없음, privileged 없음.
+#   * root filesystem 읽기 전용, non-root 사용자, 모든 capability 제거.
+#
+# 배포 시점 확인 사항 (지금 추측으로 해결하지 않는다)
+#   1. 아래 image tag 를 upstream ExternalDNS release note 와 대조하고, 프로젝트
+#      표준으로 정해진 더 최신 버전이 있으면 올린다. 여기서 사용한 flag 들은 최근
+#      릴리스에서 안정적이지만, 실제 배포할 tag 기준으로 flag 폐기 여부를 확인한다.
+#   2. TXT registry 와 IAM 조건 충돌: Terraform 의 ExternalDNS policy
+#      (terraform/modules/external-dns-iam) 는
+#      ForAllValues:route53:ChangeResourceRecordSetsNormalizedRecordNames 조건으로
+#      route53:ChangeResourceRecordSets 를 정확히 "team02-app.manoit.co.kr" 로만
+#      제한한다. 최근 ExternalDNS 버전은 "새 형식" TXT registry record 를
+#      "a-team02-app.manoit.co.kr" / "cname-team02-app.manoit.co.kr" 같은 파생
+#      이름으로도 기록한다. 이 이름들은 조건에 포함되지 않아 AccessDenied 로
+#      거부된다. 최초 apply 직전/직후에 Terraform IAM policy 조건에 TXT registry
+#      record 이름을 추가하거나 registry 관련 flag 를 policy 에 맞춘다.
+#      이번 단계에서는 Terraform 을 의도적으로 수정하지 않았다.
+#
+# 설치 방식: kubectl + YAML manifest 만 사용한다. Helm 은 사용하지 않는다.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: external-dns
+  namespace: external-dns
+  labels:
+    app.kubernetes.io/name: external-dns
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/part-of: devflow
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  replicas: 1
+  # Recreate: 동일한 txt-owner-id 의 TXT registry record 는 한 시점에 하나의
+  # ExternalDNS 인스턴스만 소유해야 한다.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: external-dns
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: external-dns
+        app.kubernetes.io/component: controller
+        app.kubernetes.io/part-of: devflow
+    spec:
+      serviceAccountName: external-dns
+      automountServiceAccountToken: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        # non-root 프로세스가 projected IRSA web identity token 파일을 읽을 수
+        # 있도록 fsGroup 이 필요하다.
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: external-dns
+          image: registry.k8s.io/external-dns/external-dns:v0.21.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - --provider=aws
+            - --source=ingress
+            - --policy=upsert-only
+            - --registry=txt
+            - --txt-owner-id=devflow-dev-eks
+            - --domain-filter=team02-app.manoit.co.kr
+            # 방어 장치: GitLab DNS 는 ExternalDNS 가 절대 건드리면 안 된다.
+            - --exclude-domains=team02-gitlab.manoit.co.kr
+            - --aws-zone-type=public
+            - --interval=1m
+            - --log-level=info
+            - --log-format=text
+            - --metrics-address=:7979
+          env:
+            - name: AWS_REGION
+              value: ap-northeast-1
+            - name: AWS_DEFAULT_REGION
+              value: ap-northeast-1
+            # AWS_STS_REGIONAL_ENDPOINTS 는 STS 호출을 해당 Region 내부로
+            # 유지시킨다. EKS endpoint 가 private 전용이므로 필요하다.
+            - name: AWS_STS_REGIONAL_ENDPOINTS
+              value: regional
+          ports:
+            - name: http-metrics
+              containerPort: 7979
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http-metrics
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http-metrics
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 192Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL

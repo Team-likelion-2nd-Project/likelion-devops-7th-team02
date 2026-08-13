@@ -1,0 +1,145 @@
+# Deployment/frontend  (Namespace: devflow)
+#
+# Source of truth: frontend/ 의 실제 애플리케이션 소스
+#   Framework        : React 19 + Vite 8 (JavaScript)      frontend/package.json
+#   Build            : npm run build -> vite build -> /app/dist
+#   Image            : multi-stage, node:20-alpine 빌드 -> nginx:alpine 런타임
+#                                                          frontend/Dockerfile
+#   Runtime          : nginx (정적 파일 서버, SPA fallback)
+#   Listen 포트      : 80    nginx.conf:2 `listen 80;` + Dockerfile:23 EXPOSE 80
+#   Document root    : /usr/share/nginx/html
+#   Health 경로      : GET /  -> index.html (HTTP 200), nginx.conf:8-10
+#   Runtime env      : 없음 (분석 근거는 k8s/frontend/configmap.yaml 참고.
+#                      VITE_API_BASE_URL 은 BUILD 시점 인자, Dockerfile:11-12)
+#
+# IMAGE - 의도적인 placeholder 이며 추측해서 채우지 않는다.
+#   CI 가 빌드/푸시하는 이름 (.gitlab-ci.yml:47-48):
+#     $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
+#   실제로 풀어 쓰면:
+#     team02-gitlab.manoit.co.kr:5050/<gitlab-group>/<gitlab-project>/frontend:<commit-short-sha>
+#   GitLab group/project 경로는 이 저장소만으로 알 수 없고 tag 는 커밋별 short
+#   SHA 이다. 배포 시점에 실제로 푸시된 참조로 <FRONTEND_IMAGE> 를 교체한다.
+#   `latest` 는 의도적으로 사용하지 않는다(불변·추적 가능한 tag 만 사용).
+#
+# 상태: AWS/EKS runtime 이 아직 없다. 이 manifest 는 apply 되지 않았다.
+# 설치 방식: kubectl + YAML manifest 만 사용한다. Helm 은 사용하지 않는다.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: devflow
+  labels:
+    app: frontend
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: devflow
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  # replicas 2: docs/architecture.md:85 및 EKS managed node group 의 desired 2
+  # (기본 HA)와 일치. Frontend HPA 는 의도적으로 범위 밖이다.
+  replicas: 2
+  revisionHistoryLimit: 5
+  # maxUnavailable 0 / maxSurge 1 -> docs/architecture.md:87 (무중단 배포)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        app.kubernetes.io/name: frontend
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/part-of: devflow
+    spec:
+      serviceAccountName: frontend-sa
+      # ServiceAccount/frontend-sa 설정과 중복이지만 명시적으로 둔다. 정적
+      # frontend 는 Kubernetes API 와 통신하지 않는다.
+      automountServiceAccountToken: false
+      # Private GitLab Registry. Secret/gitlab-registry-secret
+      # (kubernetes.io/dockerconfigjson)은 이후 단계에서 생성하며 Git 에는
+      # 절대 커밋하지 않는다.
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      nodeSelector:
+        kubernetes.io/os: linux
+      # 2개 replica 를 Node 에 최대한 분산시킨다. "preferred" 이므로 Node 가
+      # 하나뿐인 상황에서도 스케줄링은 성공한다.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: frontend
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: frontend
+          image: <FRONTEND_IMAGE>
+          # 커밋별 불변 tag 를 사용하므로 재시작 시 다시 pull 할 필요가 없다.
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          # env / envFrom 없음: 이 컨테이너는 runtime 환경변수를 사용하지 않는다.
+          # 근거는 k8s/frontend/configmap.yaml 참고.
+          # Probe 는 nginx 가 실제로 제공하는 유일한 경로인 `/` 를 사용한다
+          # (SPA index.html, 200). nginx.conf 에 존재하지 않는 /healthz 같은
+          # endpoint 를 만들어내지 않는다.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # docs/architecture.md:127 (Frontend CPU 50m/200m, Memory 64Mi/128Mi)
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          # nginx:alpine 이미지가 실제로 지원하는 범위의 최소 hardening 만 적용한다.
+          #   * allowPrivilegeEscalation: false / privileged: false  -> 안전
+          #   * seccompProfile RuntimeDefault                        -> 안전
+          # 다음은 공식 nginx:alpine 이미지가 깨지므로 의도적으로 설정하지 않는다.
+          #   * runAsNonRoot / runAsUser  -> master 프로세스가 80 포트 bind 및
+          #     worker 권한 강등을 위해 root 로 시작해야 한다
+          #   * capabilities.drop: [ALL]  -> 특권 포트 80 에 필요한
+          #     CAP_NET_BIND_SERVICE 가 제거된다
+          #   * readOnlyRootFilesystem    -> nginx 가 /var/cache/nginx/* 와
+          #     /var/run/nginx.pid 에 write 한다
+          # 더 강한 hardening 을 하려면 이미지를 바꿔야 한다(nginx-unprivileged
+          # 또는 비특권 포트 사용). 이는 애플리케이션 측 변경이므로 여기서 하지 않는다.
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+          # nginx 가 연결 수신을 멈추기 전에 ALB target group 이 Pod IP 를
+          # deregister 할 수 있도록 짧은 drain 시간을 준다. alpine 기반
+          # 이미지이므로 /bin/sh 와 sleep 이 존재한다.
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - sleep 5
