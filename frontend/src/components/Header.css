@@ -66,6 +66,7 @@
 
 .main-header-search input {
   width: 100%;
+  min-width: 0;
 
   border: none;
   outline: none;
@@ -139,6 +140,8 @@
   width: 34px;
   height: 34px;
 
+  flex-shrink: 0;
+
   border-radius: 50%;
   background-color: #dbeafe;
 
@@ -151,6 +154,17 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+
+  min-width: 0;
+}
+
+.main-header-user-info strong,
+.main-header-user-info span {
+  overflow: hidden;
+  max-width: 180px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .main-header-user-info strong {
@@ -198,6 +212,8 @@
   width: 40px;
   height: 40px;
 
+  flex-shrink: 0;
+
   border-radius: 50%;
   background-color: #dbeafe;
 
@@ -209,6 +225,16 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+
+  min-width: 0;
+}
+
+.profile-menu-user strong,
+.profile-menu-user span {
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-menu-user strong {
@@ -228,8 +254,10 @@
   background-color: #e5e7eb;
 }
 
-.profile-menu-logout,
-.profile-menu-login {
+/* Menu Buttons */
+.profile-menu-item,
+.profile-menu-login,
+.profile-menu-logout {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -241,10 +269,30 @@
   border-radius: 8px;
 
   background-color: transparent;
-  color: #dc2626;
 
   font-size: 13px;
   text-align: left;
+}
+
+.profile-menu-item {
+  color: #374151;
+}
+
+.profile-menu-item:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.profile-menu-login {
+  color: #2563eb;
+}
+
+.profile-menu-login:hover {
+  background-color: #eff6ff;
+}
+
+.profile-menu-logout {
+  color: #dc2626;
 }
 
 .profile-menu-logout:hover {
@@ -258,7 +306,6 @@
     gap: 16px;
   }
 
-  .main-header-project,
   .main-header-user-info {
     display: none;
   }
