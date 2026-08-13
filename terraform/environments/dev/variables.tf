@@ -95,3 +95,4 @@ variable "application_domain" {
   type        = string
   default     = "team02-app.manoit.co.kr"
 }
+

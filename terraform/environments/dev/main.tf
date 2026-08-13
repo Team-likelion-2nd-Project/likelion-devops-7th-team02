@@ -38,7 +38,6 @@ module "gitlab" {
   gitlab_hostname   = var.gitlab_hostname
 }
 
-# GitLab 전용 ALB (Application ALB 와 별개)
 module "gitlab-alb" {
   source = "../../modules/gitlab-alb"
 
@@ -86,7 +85,6 @@ module "external_dns_iam" {
   hosted_zone_id = data.aws_route53_zone.main.zone_id
 }
 
-# RDS PostgreSQL (Private DB Subnet)
 module "rds" {
   source = "../../modules/rds"
 

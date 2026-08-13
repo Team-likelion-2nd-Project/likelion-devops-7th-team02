@@ -22,6 +22,7 @@
 
   color: #111827;
   font-size: 28px;
+  font-weight: 700;
 }
 
 .project-list-header p {
@@ -92,6 +93,8 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+
+  min-width: 0;
 }
 
 .dashboard-summary-card span {
@@ -113,6 +116,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
 
   margin-bottom: 14px;
 }
@@ -167,6 +171,8 @@
 
 /* My Tasks */
 .dashboard-my-task-count {
+  flex-shrink: 0;
+
   padding: 4px 8px;
 
   border-radius: 999px;
@@ -206,27 +212,23 @@
   min-width: 0;
 }
 
-.dashboard-my-task-content strong {
+.dashboard-my-task-content strong,
+.dashboard-my-task-content span {
   overflow: hidden;
-
-  color: #111827;
-
-  font-size: 13px;
-  font-weight: 600;
 
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.dashboard-my-task-content strong {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .dashboard-my-task-content span {
-  overflow: hidden;
-
   color: #9ca3af;
-
   font-size: 11px;
-
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .dashboard-task-badge {
@@ -274,6 +276,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 
   padding: 10px 0;
 
@@ -330,10 +333,7 @@
 }
 
 @media (max-width: 800px) {
-  .dashboard-summary {
-    grid-template-columns: 1fr;
-  }
-
+  .dashboard-summary,
   .dashboard-bottom-grid {
     grid-template-columns: 1fr;
   }
@@ -345,7 +345,11 @@
   }
 
   .project-list-header {
-    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .project-create-button {
+    width: 100%;
   }
 
   .project-grid {
