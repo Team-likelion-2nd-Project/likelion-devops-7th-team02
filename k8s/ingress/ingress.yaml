@@ -1,57 +1,3 @@
-# Ingress/devflow-ingress  (Namespace: devflow)
-#
-# AWS Load Balancer Controller(프로젝트 계약 v2.14.1)를 통해 public Application
-# ALB 를 생성한다. 이 ALB 와 애플리케이션 Route53 record 는 Terraform 이 만들지
-# 않으며, Controller 와 ExternalDNS 가 소유한다.
-#
-#   Ingress/devflow-ingress
-#        |                          \
-#        v                           v
-#   AWS Load Balancer Controller   ExternalDNS (source=ingress)
-#        |                           |
-#        v                           v
-#   internet-facing ALB           Route53 A/ALIAS
-#        \___________  team02-app.manoit.co.kr  ___________/
-#
-# 설계 목표: AWS runtime 값 0개
-#   certificate ARN 없음, ALB ARN/DNS 없음, subnet ID 없음, security group ID
-#   없음, hosted zone ID 없음. 고정값은 애플리케이션 hostname 하나뿐이므로
-#   `terraform destroy` + `apply` 를 반복해도 이 파일은 수정할 필요가 없다.
-#
-#   * TLS 인증서   -> spec.tls[].hosts 와 spec.rules[].host 를 이용한 LBC
-#                     certificate discovery (certificate-arn annotation 이 없으므로
-#                     ACM 을 재발급해 ARN 이 바뀌어도 YAML 수정이 필요 없다)
-#   * Subnet       -> Terraform 이 public subnet 에 이미 부여한 tag 를 이용한
-#                     LBC subnet discovery:
-#                     kubernetes.io/role/elb = 1 및
-#                     kubernetes.io/cluster/devflow-dev-eks = owned
-#                     (terraform/modules/network/main.tf:59-60),
-#                     즉 public AZ-A 10.0.1.0/24, public AZ-B 10.0.2.0/24
-#   * Security group -> LBC 가 관리한다. SG id 도, SG placeholder 도 두지 않는다
-#   * ALB 이름     -> 고정하지 않는다(load-balancer-name annotation 없음).
-#                     소유권은 Ingress 객체에 남는다
-#
-# CERTIFICATE DISCOVERY 선행 조건 (Terraform apply 후 확인):
-#   ap-northeast-1 리전에 team02-app.manoit.co.kr 을 포함하고 Status = ISSUED 인
-#   ACM 인증서가 있어야 한다. Terraform 이 정확히 그것을 생성한다
-#   (terraform/modules/application-acm/main.tf, DNS 검증). 같은 hostname 에 대해
-#   ISSUED 인증서를 여러 개 남기면 discovery 가 모호해지므로 피한다.
-#
-# TLS termination 은 ACM 을 사용해 ALB 에서 수행한다. spec.tls[].secretName 은
-# 의도적으로 두지 않는다. Kubernetes TLS Secret 을 만들지 않으며 Pod 에서 TLS 를
-# 종료하지 않는다.
-#
-# EXTERNALDNS: hostname source 는 Kubernetes 표준 필드인 spec.rules[].host 다.
-# 이는 Controller 에 설정된 --domain-filter=team02-app.manoit.co.kr 과 일치한다
-# (k8s/controllers/external-dns/deployment.yaml).
-# external-dns.alpha.kubernetes.io/hostname annotation 은 의도적으로 사용하지
-# 않는다. runtime 에서 discovery 실패가 확인될 때만 추가를 검토한다. GitLab
-# hostname team02-gitlab.manoit.co.kr 은 여기서 절대 참조하지 않는다. 해당
-# 도메인은 Terraform 이 관리하는 별도 ALB 와 DNS record 를 사용한다.
-#
-# 상태: AWS/EKS/ALB runtime 이 아직 없다. 이 manifest 는 apply 되지 않았다.
-# 설치 방식: kubectl + YAML manifest 만 사용한다. Helm 은 사용하지 않는다.
----
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -63,30 +9,12 @@ metadata:
     app.kubernetes.io/part-of: devflow
     app.kubernetes.io/managed-by: kubectl
   annotations:
-    # tag 가 부여된 public subnet 에 생성되는 public ALB.
     alb.ingress.kubernetes.io/scheme: internet-facing
-    # ip target: Pod IP 를 직접 등록한다(VPC CNI). 두 backend Service 가 모두
-    # ClusterIP 이므로 필수다. "instance" 모드는 NodePort 를 요구한다.
-    #   ALB -> Pod IP (kube-proxy 홉 없음)
     alb.ingress.kubernetes.io/target-type: ip
-    # 두 listener 모두 생성. 값은 유효한 JSON 을 담은 따옴표 문자열이어야 한다.
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
-    # HTTP listener 에서 Controller 가 생성하는 redirect: 80 -> 443.
-    # 별도의 custom redirect backend/action 을 만들지 않는다.
     alb.ingress.kubernetes.io/ssl-redirect: "443"
-    # 의도적으로 설정하지 않은 annotation:
-    #   certificate-arn      -> certificate discovery 사용 (상단 설명 참고)
-    #   subnets              -> Terraform tag 기반 subnet discovery 사용
-    #   security-groups      -> Controller 가 관리
-    #   load-balancer-name   -> 고정된 AWS 리소스 이름과의 결합을 피함
-    #   healthcheck-*        -> Target Group 단위이므로 각 Service 에 설정
-    #                           (frontend "/" vs backend "/actuator/health").
-    #                           k8s/frontend/service.yaml 및
-    #                           k8s/backend/service.yaml 참고
 spec:
   ingressClassName: alb
-  # LBC certificate discovery 가 사용하는 hostname 목록. secretName 은 두지
-  # 않는다. TLS termination 은 ACM + ALB 가 담당한다.
   tls:
     - hosts:
         - team02-app.manoit.co.kr
@@ -94,20 +22,6 @@ spec:
     - host: team02-app.manoit.co.kr
       http:
         paths:
-          # 구체적인 경로부터 먼저 정의한다. ALB 는 Controller 가 생성한 순서대로
-          # listener rule 을 평가하므로 이 순서가 필요하다(Kubernetes 의
-          # longest-prefix 규칙과도 결과가 일치한다). 즉 비표준 순서 트릭에
-          # 의존하는 것이 아니다.
-          #
-          # 1) health endpoint -> backend.
-          #    리터럴 glob "/actuator/health*" 가 아니라 pathType Prefix 를 쓴다.
-          #    /actuator/health, /actuator/health/liveness,
-          #    /actuator/health/readiness 에 매칭되며(모두
-          #    backend/.../SecurityConfig.java:43-50 에서 permitAll),
-          #    /actuator/prometheus 에는 의도적으로 매칭되지 않는다.
-          #    frontend/src/api/healthApi.js:4 가 /actuator/health 를 same-origin
-          #    으로 호출하기 때문에 필요하다. 이 경로를 nginx 로 보내면 SPA
-          #    fallback 때문에 index.html 이 반환된다.
           - path: /actuator/health
             pathType: Prefix
             backend:
@@ -115,8 +29,6 @@ spec:
                 name: backend-service
                 port:
                   number: 8080
-          # 2) REST API -> backend. Prefix 이므로 /api 및 /api/... 를 포함한다.
-          #    예: /api/auth/login, /api/projects, /api/users/me.
           - path: /api
             pathType: Prefix
             backend:
@@ -124,10 +36,6 @@ spec:
                 name: backend-service
                 port:
                   number: 8080
-          # 3) 그 외 전부 -> frontend nginx (SPA, 클라이언트 사이드 라우팅).
-          #    참고: /actuator/prometheus 는 backend 로 라우팅되지 않으므로 이
-          #    규칙으로 흘러간다. 즉 metric 이 public ALB 로 공개되지 않는다.
-          #    Prometheus 는 클러스터 내부에서 직접 scrape 한다.
           - path: /
             pathType: Prefix
             backend:

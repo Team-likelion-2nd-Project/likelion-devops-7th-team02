@@ -11,7 +11,7 @@ module "network" {
   private_db_subnet_cidrs  = ["10.0.20.0/24", "10.0.21.0/24"]
   project_name             = var.project_name
   environment              = var.environment
-  eks_cluster_name         = "${var.project_name}-${var.environment}"
+  eks_cluster_name         = "${var.project_name}-${var.environment}-eks"
 }
 
 # ALB / GitLab / EKS Node / RDS 용 Security Group

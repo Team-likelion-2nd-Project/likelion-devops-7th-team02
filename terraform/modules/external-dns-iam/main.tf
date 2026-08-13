@@ -37,7 +37,9 @@ resource "aws_iam_policy" "external_dns" {
         Condition = {
           "ForAllValues:StringEquals" = {
             "route53:ChangeResourceRecordSetsNormalizedRecordNames" = [
-              "team02-app.manoit.co.kr"
+              "team02-app.manoit.co.kr",
+              "aaaa-team02-app.manoit.co.kr",
+              "cname-team02-app.manoit.co.kr"
             ]
           }
         }

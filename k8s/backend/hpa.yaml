@@ -1,56 +1,3 @@
-# HorizontalPodAutoscaler/backend-hpa  (Namespace: devflow)
-#
-# 대상은 추측이 아니라 실제 manifest 와 대조해 확인했다
-# (k8s/backend/deployment.yaml):
-#   kind/name        : Deployment/backend        (deployment.yaml:39,41)
-#   namespace        : devflow                   (deployment.yaml:42)
-#   container        : backend                   (deployment.yaml:99)
-#   초기 replicas    : 2                         (deployment.yaml:54)
-#   requests.cpu     : 250m                      (deployment.yaml:164)  <- 필수
-#   requests.memory  : 512Mi                     (deployment.yaml:165)
-#   limits           : cpu 1000m / memory 1Gi    (deployment.yaml:166-168)
-# 모든 값이 이전 단계의 계약과 일치하며 불일치는 없다.
-#
-# CPU utilization 은 requests.cpu 를 기준으로 계산되므로, 250m 의 70% 인 Pod 당
-# 평균 175m 이 scale-out 임계값이 된다. requests.cpu 가 존재한다는 점이 Resource
-# metric 기반 HPA 의 전제 조건이다. 없으면 HPA 는 <unknown> 을 보고하며 절대
-# scale 하지 않는다.
-#
-# REPLICA 소유권
-#   이 HPA 를 apply 한 뒤부터 Deployment/backend 의 replica 수는 HPA controller 가
-#   소유한다. deployment.yaml 의 `replicas: 2` 는 최초 apply 시점의 초기값일
-#   뿐이며, 이후 해당 manifest 를 다시 apply 하면 잠시 HPA 와 충돌할 수 있다.
-#   그래서 GitLab CI 는 image 업데이트로만 제한하고 spec.replicas 를 쓰지
-#   못하게 했다(k8s/rbac/gitlab-deployer-role.yaml 참고).
-#
-# CPU 단일 metric 인 이유
-#   memory metric 은 넣지 않는다. JVM 의 heap/cache/GC 특성상 부하와 무관하게
-#   memory 사용률이 높고 평탄하게 유지되므로, memory 기준을 두면 scale-out 후
-#   다시 축소되지 않는 현상이 발생한다. memory 또는 custom metric(예:
-#   /actuator/prometheus 의 Micrometer HTTP metric)은 실제 부하 테스트 이후에
-#   재검토한다.
-#
-# spec.behavior 미사용
-#   Kubernetes 기본 stabilization(scale-down 300초 창, scale-up 지연 없음)을
-#   사용한다. 프로젝트 문서에 stabilization/policy 값이 명시되어 있지 않으므로
-#   임의로 만들지 않았다.
-#
-# RUNTIME 선행 조건: Metrics Server 가 반드시 필요하며 아직 설치되어 있지 않다.
-#   metrics.k8s.io 가 없으면 이 HPA 는
-#     "failed to get cpu utilization: unable to get metrics for resource cpu"
-#   를 보고하고 replica 를 minReplicas 로 유지한다. Metrics Server 는 다음
-#   (Monitoring) 단계 소관이므로 여기서는 의도적으로 생성하지 않는다.
-#
-# 용량 관련 주의 (Pod scaling != Node scaling)
-#   HPA 는 Pod 수만 조절한다. 이 클러스터에는 Cluster Autoscaler / Karpenter 가
-#   없고, managed node group 은 NODE 기준 min 2 / desired 2 / max 4 이다. 숫자는
-#   이 HPA 범위와 같지만 완전히 다른 차원이다. Backend Pod 를 4개로 늘리면
-#   (4 x 250m CPU + 4 x 512Mi requests, 여기에 frontend Pod 2개와 시스템
-#   DaemonSet 까지) 실행 중인 2개 Node 의 allocatable 이 부족해 Pod 가 Pending
-#   상태로 남을 수 있다. 이번 단계에서는 autoscaler 를 추가하지 않는다.
-#
-# 상태: EKS/Metrics Server runtime 이 아직 없다. 어디에도 apply 되지 않았다.
----
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -67,8 +14,6 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: backend
-  # 유휴 상태에서도 기본 HA 인 2 Pod 를 유지하고, 상한 4 로 현재 2-Node group 의
-  # 현실적인 용량 안에서 영향 범위를 제한한다.
   minReplicas: 2
   maxReplicas: 4
   metrics:
@@ -77,5 +22,4 @@ spec:
         name: cpu
         target:
           type: Utilization
-          # requests.cpu(250m)의 70% = Pod 당 평균 약 175m
           averageUtilization: 70

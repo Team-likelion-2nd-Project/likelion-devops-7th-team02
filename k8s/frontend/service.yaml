@@ -1,28 +1,3 @@
-# Service/frontend-service  (Namespace: devflow)
-#
-# ClusterIP 전용. 외부 노출은 이 Service 의 역할이 아니다.
-#   Ingress/devflow-ingress -> AWS Load Balancer Controller -> ALB -> frontend-service
-#   (k8s/ingress/ingress.yaml 이 "/" 를 여기로 라우팅한다)
-# type: LoadBalancer 는 의도적으로 사용하지 않는다(Service 별 NLB/CLB 금지).
-#
-# 포트 매핑
-#   Service port 80 -> targetPort "http" -> container port 80
-#   (Deployment/frontend 의 컨테이너 포트 "http" 이름으로 해석된다.
-#    nginx.conf:2 `listen 80;`, frontend/Dockerfile:23 EXPOSE 80)
-#
-# selector 는 Deployment/frontend 의 Pod template label 과 정확히 일치해야 한다: app=frontend
-#
-# ALB TARGET GROUP HEALTH CHECK
-#   health check 는 Ingress 가 아니라 Service 에 둔다. Frontend 와 Backend 의
-#   health 경로가 다르기 때문에("/" vs "/actuator/health") Ingress 레벨에
-#   healthcheck-path 를 하나만 지정하면 두 Target Group 중 하나가 잘못된다.
-#   AWS Load Balancer Controller 는 Target Group 범위의 annotation 을 backend
-#   Service 에서 읽는다.
-#   "/" 는 nginx 가 index.html 로 HTTP 200 을 반환한다(nginx.conf:8-10).
-#   이 이미지에는 별도의 health endpoint 가 없으며 임의로 만들지 않았다.
-#   healthcheck-path 만 지정한다. 나머지는 Controller 기본값이 이 workload 와
-#   이미 일치한다: protocol HTTP, port traffic-port, success-codes 200.
----
 apiVersion: v1
 kind: Service
 metadata:
