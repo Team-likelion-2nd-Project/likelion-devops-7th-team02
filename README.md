@@ -281,7 +281,7 @@ npm run dev
 
 * Backend: `http://localhost:8080`
 * Swagger: `http://localhost:8080/swagger-ui/index.html`
-* Frontend: Vite 실행 시 출력되는 Local URL
+* Frontend: `http://localhost:3000`
 
 ### 검증
 
