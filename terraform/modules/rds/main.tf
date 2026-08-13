@@ -1,3 +1,5 @@
+# RDS 모듈: PostgreSQL 단일 인스턴스 (Private DB Subnet, 외부 접근 차단)
+
 locals {
   common_tags = {
     Project     = var.project_name
@@ -9,6 +11,7 @@ locals {
   db_subnet_group_name   = "${var.project_name}-${var.environment}-db-subnet-group"
 }
 
+# RDS 를 배치할 Private DB Subnet 그룹
 resource "aws_db_subnet_group" "rds" {
   name       = local.db_subnet_group_name
   subnet_ids = var.subnet_ids
@@ -18,6 +21,7 @@ resource "aws_db_subnet_group" "rds" {
   })
 }
 
+# publicly_accessible = false, 스토리지 암호화, 백업 7일 보관
 resource "aws_db_instance" "rds" {
   identifier          = local.db_instance_identifier
   engine              = var.engine
@@ -42,6 +46,8 @@ resource "aws_db_instance" "rds" {
   })
 }
 
+# endpoint 는 "host:5432" 형식이다. Backend 의 DB_URL 에 넣을 때 포트를 중복해서
+# 붙이지 않도록 주의한다.
 output "endpoint" {
   description = "RDS endpoint"
   value       = aws_db_instance.rds.endpoint

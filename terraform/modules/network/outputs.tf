@@ -1,3 +1,5 @@
+# Network 모듈 출력값 (VPC / Subnet ID)
+
 output "vpc_id" {
   description = "VPC ID"
   value       = aws_vpc.main.id

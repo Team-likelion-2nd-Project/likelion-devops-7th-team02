@@ -1,3 +1,6 @@
+# EKS 모듈: 클러스터, IAM Role, OIDC Provider, Managed Node Group, 기본 Add-on
+# API 엔드포인트는 Private 전용이라 VPC 내부(GitLab Runner 등)에서만 접근 가능하다.
+
 locals {
   common_tags = {
     Project     = var.project_name
@@ -9,6 +12,7 @@ locals {
 }
 
 # --- EKS Cluster IAM Role -------------------------------------------------
+# EKS 컨트롤 플레인이 사용하는 Role
 resource "aws_iam_role" "eks_cluster" {
   name = "${local.cluster_name}-cluster-role"
 
@@ -30,6 +34,7 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_AmazonEKSClusterPolicy" {
 }
 
 # --- EKS Node IAM Role ---------------------------------------------------
+# Worker Node(EC2)가 사용하는 Role. ECR 은 Pull 전용 권한만 부여한다.
 resource "aws_iam_role" "eks_node" {
   name = "${local.cluster_name}-node-role"
 
@@ -61,7 +66,7 @@ resource "aws_eks_cluster" "main" {
   role_arn = aws_iam_role.eks_cluster.arn
   version  = var.kubernetes_version
 
-  # Allow future EKS Access Entries for admin / GitLab Runner IAM integration (no legacy aws-auth ConfigMap dependency).
+  # Access Entry 방식 사용 (레거시 aws-auth ConfigMap 에 의존하지 않음)
   access_config {
     authentication_mode = "API_AND_CONFIG_MAP"
   }
@@ -72,6 +77,7 @@ resource "aws_eks_cluster" "main" {
     support_type = "STANDARD"
   }
 
+  # Private 엔드포인트만 사용 (외부 인터넷에서 API 접근 불가)
   vpc_config {
     subnet_ids              = var.private_app_subnet_ids
     endpoint_private_access = true
@@ -83,6 +89,7 @@ resource "aws_eks_cluster" "main" {
   depends_on = [aws_iam_role_policy_attachment.eks_cluster_AmazonEKSClusterPolicy]
 }
 
+# GitLab Runner 가 Private API 엔드포인트(443)에 접근할 수 있도록 허용
 resource "aws_vpc_security_group_ingress_rule" "eks_api_from_gitlab" {
   security_group_id = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
 
@@ -95,6 +102,7 @@ resource "aws_vpc_security_group_ingress_rule" "eks_api_from_gitlab" {
   description = "Allow GitLab Runner to access EKS private API endpoint"
 }
 
+# GitLab Runner IAM Role 을 EKS 사용자로 등록 (조회 권한만)
 resource "aws_eks_access_entry" "gitlab_runner" {
   cluster_name  = aws_eks_cluster.main.name
   principal_arn = var.gitlab_runner_role_arn
@@ -117,7 +125,7 @@ resource "aws_eks_access_policy_association" "gitlab_runner_view" {
 }
 
 # --- EKS OIDC Provider ---------------------------------------------------
-# Reads the TLS certificate of the cluster's OIDC issuer URL to obtain a valid SHA1 thumbprint.
+# IRSA(ServiceAccount 단위 IAM 권한)의 기반. OIDC issuer 인증서에서 지문을 얻는다.
 data "tls_certificate" "eks_oidc" {
   url = aws_eks_cluster.main.identity[0].oidc[0].issuer
 
@@ -132,7 +140,8 @@ resource "aws_iam_openid_connect_provider" "eks" {
   thumbprint_list = [data.tls_certificate.eks_oidc.certificates[0].sha1_fingerprint]
 }
 
-# --- VPC CNI dedicated IAM Role (service-account level, not worker node) -
+# --- VPC CNI 전용 IAM Role -----------------------------------------------
+# kube-system/aws-node ServiceAccount 에만 연결한다(Node Role 오염 방지).
 resource "aws_iam_role" "vpc_cni" {
   name = "${local.cluster_name}-vpc-cni-role"
 
@@ -163,7 +172,8 @@ resource "aws_iam_role_policy_attachment" "vpc_cni_AmazonEKS_CNI_Policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
-# --- Launch Template (ensures DevFlow EKS Node SG is attached) -----------
+# --- Launch Template -----------------------------------------------------
+# Node 에 DevFlow EKS Node SG 가 반드시 붙도록 강제한다.
 resource "aws_launch_template" "eks_node" {
   name        = "${local.cluster_name}-node-lt"
   description = "Launch template for EKS managed node group ensuring required SG relationship"
@@ -178,13 +188,14 @@ resource "aws_launch_template" "eks_node" {
     tags          = merge(local.common_tags, { Name = "${local.cluster_name}-node-lt-instance" })
   }
 
-  # No SSH key pair configured; no TCP/22 exposed. The EKS-optimized AL2023 AMIs
-  # handle the EKS bootstrap automatically, so user_data is not set on this template.
+  # SSH 키 없음(22 포트 미개방). AL2023 EKS 최적화 AMI 가 부트스트랩을 자동
+  # 처리하므로 user_data 도 설정하지 않는다.
 
   tags = merge(local.common_tags, { Name = "${local.cluster_name}-node-lt" })
 }
 
 # --- Managed Node Group --------------------------------------------------
+# Private App Subnet 에 배치. 기본 2대, 최대 4대.
 resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "${local.cluster_name}-node-group"
@@ -220,12 +231,13 @@ resource "aws_eks_node_group" "main" {
   ]
 }
 
-# --- EKS Managed Add-ons -------------------------------------------------
+# --- EKS 관리형 Add-on ---------------------------------------------------
+# vpc-cni 는 Node 생성 전에, coredns/kube-proxy 는 Node 생성 후에 설치된다.
 resource "aws_eks_addon" "vpc_cni" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "vpc-cni"
 
-  # Reuse the dedicated VPC CNI IAM role via service-account-level integration (no node-role pollution).
+  # 위에서 만든 전용 IAM Role 을 ServiceAccount 단위로 연결
   service_account_role_arn = aws_iam_role.vpc_cni.arn
 
   resolve_conflicts_on_create = "OVERWRITE"

@@ -1,3 +1,6 @@
+# Security 모듈: ALB / GitLab / EKS Node / RDS 4개 Security Group 정의
+# 트래픽 흐름: 인터넷 -> ALB SG -> GitLab SG, EKS Node SG -> RDS SG(5432)
+
 locals {
   common_tags = {
     Project     = var.project_name
@@ -8,6 +11,7 @@ locals {
   eks_cluster_name_tag = var.eks_cluster_name != "" ? var.eks_cluster_name : var.project_name
 }
 
+# ALB: 인터넷에서 80/443/5050(GitLab Registry) 수신
 resource "aws_security_group" "alb" {
   name        = "${var.project_name}-${var.environment}-alb-sg"
   description = "Security group for ALB with HTTP/HTTPS from internet"
@@ -50,6 +54,7 @@ resource "aws_security_group" "alb" {
   })
 }
 
+# GitLab EC2: 웹/레지스트리는 ALB 경유만 허용, 2222 는 디버깅용 SSH
 resource "aws_security_group" "gitlab" {
   name        = "${var.project_name}-${var.environment}-gitlab-sg"
   description = "Security group for GitLab EC2 via ALB"
@@ -92,6 +97,7 @@ resource "aws_security_group" "gitlab" {
   })
 }
 
+# EKS Worker Node: 인바운드 규칙은 EKS 가 관리하므로 아웃바운드만 정의
 resource "aws_security_group" "eks_node" {
   name        = "${var.project_name}-${var.environment}-eks-node-sg"
   description = "Security group for EKS worker nodes"
@@ -110,6 +116,7 @@ resource "aws_security_group" "eks_node" {
   })
 }
 
+# RDS: EKS Node SG 에서 오는 5432 만 허용 (외부 접근 불가)
 resource "aws_security_group" "rds" {
   name        = "${var.project_name}-${var.environment}-rds-sg"
   description = "Security group for RDS PostgreSQL"
@@ -136,6 +143,7 @@ resource "aws_security_group" "rds" {
   })
 }
 
+# 다른 모듈에서 참조하는 SG ID
 output "alb_security_group_id" {
   description = "ALB Security Group ID"
   value       = aws_security_group.alb.id

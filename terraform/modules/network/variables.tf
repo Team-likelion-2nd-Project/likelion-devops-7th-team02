@@ -1,3 +1,5 @@
+# Network 모듈 입력 변수
+
 variable "vpc_cidr" {
   description = "VPC CIDR block"
   type        = string

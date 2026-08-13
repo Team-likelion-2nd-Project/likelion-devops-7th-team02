@@ -1,0 +1,252 @@
+diff --git a/k8s/backend/configmap.yaml b/k8s/backend/configmap.yaml
+index 90cf8c6..2538743 100644
+--- a/k8s/backend/configmap.yaml
++++ b/k8s/backend/configmap.yaml
+@@ -23,17 +23,20 @@
+ #   (docs/architecture.md:102 에는 DB_HOST/DB_PORT/DB_NAME 이 적혀 있으나 실제
+ #    소스와 다르므로 소스를 따랐다. 이 불일치는 조용히 맞추지 않고 보고했다.)
+ #
+-# Terraform apply 이후 교체해야 할 placeholder (AWS 아직 미배포):
+-#   <RDS_ENDPOINT>  포트를 제외한 RDS HOST 주소만 넣는다.
+-#                   주의: terraform output `rds_endpoint` 는
+-#                   aws_db_instance.endpoint 이며 이미 "host:5432" 형태다
+-#                   (terraform/modules/rds/main.tf:45-48). 치환 전에 ":5432" 를
+-#                   제거해야 하며, 그러지 않으면 URL 이 ":5432:5432" 로 끝난다.
+-#                     terraform -chdir=terraform/environments/dev output -raw rds_endpoint
+-#   <DB_NAME>       RDS 초기 데이터베이스 이름 (terraform 변수 db_name, 현재
+-#                   terraform/environments/dev/variables.tf:36-40 에서 기본값이
+-#                   "deflow_db" 이다 - "deflow"/"devflow" 오타로 보인다. 실제
+-#                   RDS 에 생성된 이름을 사용하고 "devflow" 라고 단정하지 않는다).
++# 확정된 값 (실제 배포에서 확인)
++#   port      5432
++#   DB 이름   deflow_db   ("devflow" 가 아니다. 기존 RDS 에 이미 존재하는 이름을
++#                          그대로 사용하며 새 database 를 만들지 않는다.)
++#   정상 형식 jdbc:postgresql://<RDS_HOST>:5432/deflow_db
++#
++# 남은 placeholder 는 <RDS_HOST> 하나뿐이다 (RDS 인스턴스마다 달라지는 값이므로
++# YAML 에 고정하지 않는다):
++#   <RDS_HOST>  포트를 제외한 RDS HOST 주소만 넣는다.
++#               주의: terraform output `rds_endpoint` 는 aws_db_instance.endpoint
++#               이며 이미 "host:5432" 형태다 (terraform/modules/rds/main.tf:45-48).
++#               치환 전에 ":5432" 를 제거해야 하며, 그러지 않으면 URL 이
++#               ":5432:5432" 로 끝난다.
++#                 terraform -chdir=terraform/environments/dev output -raw rds_endpoint
+ #
+ # Profile 선택: dev
+ #   application-dev.yml 이 존재하며 Terraform "dev" 환경에 대응한다. dev 와 prod
+@@ -46,6 +49,9 @@
+ # project_members / tasks 테이블이 미리 존재해야 하며, 없으면 Pod 가 기동 시
+ # "Schema-validation: missing table [...]" 으로 실패한다.
+ # 이는 애플리케이션/DB 초기화 작업이며 YAML 로 해결할 수 있는 문제가 아니다.
++# validate 가 확인된 정상 runtime 이므로 이 ConfigMap 에
++# SPRING_JPA_HIBERNATE_DDL_AUTO 를 추가해 update 로 우회하지 않는다
++# (기존 RDS 스키마를 Hibernate 가 변경하게 되는 것을 막는다).
+ ---
+ apiVersion: v1
+ kind: ConfigMap
+@@ -61,7 +67,8 @@ metadata:
+ data:
+   SPRING_PROFILES_ACTIVE: "dev"
+   SERVER_PORT: "8080"
+-  # jdbc:postgresql://<포트를-제외한-host>:5432/<데이터베이스-이름>
+-  DB_URL: "jdbc:postgresql://<RDS_ENDPOINT>:5432/<DB_NAME>"
++  # jdbc:postgresql://<포트를-제외한-host>:5432/deflow_db
++  # port 와 DB 이름은 확정값이므로 고정. host 만 배포 시점에 치환한다.
++  DB_URL: "jdbc:postgresql://<RDS_HOST>:5432/deflow_db"
+   # 3600000 ms = 1시간 (application.yml:28 기본값을 명시적으로 유지)
+   JWT_EXPIRATION: "3600000"
+diff --git a/k8s/backend/deployment.yaml b/k8s/backend/deployment.yaml
+index d624b5e..696ea3d 100644
+--- a/k8s/backend/deployment.yaml
++++ b/k8s/backend/deployment.yaml
+@@ -18,21 +18,25 @@
+ #   공개 endpoint    : /actuator/health/**, /actuator/prometheus 가 permitAll
+ #                      backend/src/.../global/security/SecurityConfig.java:43-50
+ #
+-# IMAGE - 의도적인 placeholder 이며 추측해서 채우지 않는다.
++# IMAGE
+ #   CI 가 빌드/푸시하는 이름 (.gitlab-ci.yml:56-57):
+ #     $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA
+-#   실제로 풀어 쓰면:
+-#     team02-gitlab.manoit.co.kr:5050/<gitlab-group>/<gitlab-project>/backend:<commit-short-sha>
+-#   GitLab group/project 경로는 이 저장소만으로 알 수 없고 tag 는 커밋별 short
+-#   SHA 이므로, 배포 시점에 실제로 푸시된 참조로 <BACKEND_IMAGE> 를 교체한다.
++#   registry + project 경로는 확정되었으므로 아래 image 필드에 고정해 두었다:
++#     team02-gitlab.manoit.co.kr:5050/root/devflow/backend
++#   커밋마다 달라지는 것은 tag 뿐이므로 placeholder 는 <IMAGE_TAG>
++#   (= $CI_COMMIT_SHORT_SHA) 하나만 남는다. YAML 을 손으로 고치는 대신 배포
++#   시점에는 다음 명령으로 tag 만 갱신한다(k8s/rbac/gitlab-deployer-role.yaml:18):
++#     kubectl -n devflow set image deployment/backend \
++#       backend=team02-gitlab.manoit.co.kr:5050/root/devflow/backend:<short-sha>
+ #   `latest` 는 의도적으로 사용하지 않는다.
+ #
+ # 기동 선행 조건 (충족되지 않으면 Pod 가 기동 실패한다):
+-#   dev/prod profile 은 ddl-auto: validate 를 사용하고 Flyway/Liquibase 가 없다.
++#   dev/prod profile 은 ddl-auto: validate 를 사용하고 Flyway/Liquibase 가 없다
++#   (application-dev.yml:15). 이 값이 정상 runtime 이므로 Kubernetes YAML 에서
++#   ddl-auto 를 override 하지 않는다(특히 update 를 주입하지 않는다).
+ #   따라서 RDS 에 users / projects / project_members / tasks 테이블이 이미 있어야
+ #   한다. k8s/backend/configmap.yaml 의 설명 참고.
+ #
+-# 상태: AWS/EKS/RDS runtime 이 아직 없다. 어디에도 apply 되지 않았다.
+ # 설치 방식: kubectl + YAML manifest 만 사용한다. Helm 은 사용하지 않는다.
+ ---
+ apiVersion: apps/v1
+@@ -98,7 +102,8 @@ spec:
+       terminationGracePeriodSeconds: 30
+       containers:
+         - name: backend
+-          image: <BACKEND_IMAGE>
++          # tag 만 배포 시점 값이다. registry/repository 는 확정값이므로 고정.
++          image: team02-gitlab.manoit.co.kr:5050/root/devflow/backend:<IMAGE_TAG>
+           imagePullPolicy: IfNotPresent
+           ports:
+             - name: http
+diff --git a/k8s/controllers/aws-load-balancer-controller/serviceaccount.yaml b/k8s/controllers/aws-load-balancer-controller/serviceaccount.yaml
+index b474398..a2e8418 100644
+--- a/k8s/controllers/aws-load-balancer-controller/serviceaccount.yaml
++++ b/k8s/controllers/aws-load-balancer-controller/serviceaccount.yaml
+@@ -14,18 +14,29 @@
+ #   Trust 조건         : oidc ...:sub == system:serviceaccount:kube-system:aws-load-balancer-controller
+ #                        oidc ...:aud == sts.amazonaws.com
+ #
+-# 상태: AWS 인프라가 아직 배포되지 않았다.
+-#   아래 role-arn 은 의도적인 placeholder 이다.
++# 아래 role-arn 은 의도적인 placeholder 이다.
+ #   `terraform apply` 이후 <ALB_CONTROLLER_IAM_ROLE_ARN> 을 다음 값으로 교체한다.
+ #       terraform -chdir=terraform/environments/dev output -raw alb_controller_role_arn
+ #   AWS Account ID 나 ARN 을 추측해서 채우지 않는다.
+ #
+ # 참고: 이 파일에는 프로젝트가 소유하는 ServiceAccount 만 들어 있다.
+-#   전체 Controller manifest(CRD, RBAC, Deployment, Webhook, Service)는 여기에
+-#   포함하지 않는다. 실제 배포 시 공식 upstream v2.14.1 manifest 를 사용하고,
++#   전체 Controller manifest(CRD, RBAC, Deployment, Webhook, Service)는 이
++#   저장소에 없다. 실제 배포 시 공식 upstream v2.14.1 manifest 를 사용하고,
+ #   해당 manifest 에 포함된 ServiceAccount 가 이 파일을 덮어쓰지 않도록 주의한다.
+ #   (덮어썼다면 이 파일을 다시 apply 해서 IRSA annotation 이 남도록 한다.)
+ #
++# Controller Deployment 의 확인된 정상 args (실제 배포에서 검증된 값)
++#   upstream Deployment 는 이 저장소가 소유하지 않으므로 여기에 값만 기록해 둔다.
++#   upstream manifest 를 apply 한 뒤 Deployment/aws-load-balancer-controller
++#   (Namespace kube-system) 의 container args 가 아래와 같아야 한다.
++#     --cluster-name=devflow-dev-eks
++#     --ingress-class=alb
++#     --aws-region=ap-northeast-1
++#     --aws-vpc-id=vpc-03ce860a387276e31
++#   region / vpc-id 를 생략하면 private endpoint 환경에서 IMDS 조회 실패로
++#   Controller 가 기동하지 못하고, ingress-class 가 없으면
++#   Ingress/devflow-ingress (ingressClassName: alb) 를 조정하지 않는다.
++#
+ # 설치 방식: kubectl + YAML manifest 만 사용한다. Helm 은 사용하지 않는다.
+ ---
+ apiVersion: v1
+diff --git a/k8s/controllers/external-dns/deployment.yaml b/k8s/controllers/external-dns/deployment.yaml
+index 2eddc84..78fc3ee 100644
+--- a/k8s/controllers/external-dns/deployment.yaml
++++ b/k8s/controllers/external-dns/deployment.yaml
+@@ -9,18 +9,17 @@
+ #   Policy          : upsert-only     (기존 Route53 record 를 삭제하지 않음)
+ #   Registry        : txt
+ #   TXT owner id    : devflow-dev-eks
+-#   Domain filter   : team02-app.manoit.co.kr   (public hosted zone)
++#   Domain filter   : manoit.co.kr   (Route53 public hosted zone 이름과 일치해야
++#                     한다. team02-app.manoit.co.kr 로 좁히면 zone 매칭에 실패한다.)
+ #   Region          : ap-northeast-1
+ #
+ #   ExternalDNS 관리 대상이 아님: team02-gitlab.manoit.co.kr
+-#   (GitLab DNS/ALB 는 이 Controller 가 아니라 Terraform 이 생성한다.)
++#   (GitLab DNS/ALB 는 이 Controller 가 아니라 Terraform 이 생성한다. domain-filter
++#    가 zone 전체이므로 --exclude-domains 로 반드시 제외 상태를 유지한다.)
+ #
+ # AWS + EKS 배포 후 Runtime 흐름:
+ #   Ingress (devflow app) -> ExternalDNS -> Route53 -> team02-app.manoit.co.kr
+ #
+-# 상태: AWS 인프라가 아직 배포되지 않았다. 이 manifest 는 사전에 준비만 되었고
+-#   어떤 클러스터에도 apply 되지 않았다.
+-#
+ # 보안
+ #   * AWS 자격증명은 오직 IRSA(projected service account token)로만 제공된다.
+ #   * static AWS key 없음, credential Secret 없음, hostPath 없음, privileged 없음.
+@@ -34,7 +33,8 @@
+ #      (terraform/modules/external-dns-iam) 는
+ #      ForAllValues:route53:ChangeResourceRecordSetsNormalizedRecordNames 조건으로
+ #      route53:ChangeResourceRecordSets 를 정확히 "team02-app.manoit.co.kr" 로만
+-#      제한한다. 최근 ExternalDNS 버전은 "새 형식" TXT registry record 를
++#      제한한다(domain-filter 는 zone 전체이지만 실제로 변경 가능한 record 는
++#      이 IAM 조건이 결정한다). 최근 ExternalDNS 버전은 "새 형식" TXT registry record 를
+ #      "a-team02-app.manoit.co.kr" / "cname-team02-app.manoit.co.kr" 같은 파생
+ #      이름으로도 기록한다. 이 이름들은 조건에 포함되지 않아 AccessDenied 로
+ #      거부된다. 최초 apply 직전/직후에 Terraform IAM policy 조건에 TXT registry
+@@ -92,7 +92,10 @@ spec:
+             - --policy=upsert-only
+             - --registry=txt
+             - --txt-owner-id=devflow-dev-eks
+-            - --domain-filter=team02-app.manoit.co.kr
++            # Hosted Zone 기준으로 지정한다. team02-app.manoit.co.kr 로 좁히면
++            # ExternalDNS 가 hosted zone(manoit.co.kr) 을 매칭하지 못해 record 를
++            # 하나도 생성하지 않는다. 실제 배포에서 확인된 정상값이다.
++            - --domain-filter=manoit.co.kr
+             # 방어 장치: GitLab DNS 는 ExternalDNS 가 절대 건드리면 안 된다.
+             - --exclude-domains=team02-gitlab.manoit.co.kr
+             - --aws-zone-type=public
+diff --git a/k8s/frontend/deployment.yaml b/k8s/frontend/deployment.yaml
+index 6ec0834..9b6b59e 100644
+--- a/k8s/frontend/deployment.yaml
++++ b/k8s/frontend/deployment.yaml
+@@ -12,16 +12,19 @@
+ #   Runtime env      : 없음 (분석 근거는 k8s/frontend/configmap.yaml 참고.
+ #                      VITE_API_BASE_URL 은 BUILD 시점 인자, Dockerfile:11-12)
+ #
+-# IMAGE - 의도적인 placeholder 이며 추측해서 채우지 않는다.
++# IMAGE
+ #   CI 가 빌드/푸시하는 이름 (.gitlab-ci.yml:47-48):
+ #     $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
+-#   실제로 풀어 쓰면:
+-#     team02-gitlab.manoit.co.kr:5050/<gitlab-group>/<gitlab-project>/frontend:<commit-short-sha>
+-#   GitLab group/project 경로는 이 저장소만으로 알 수 없고 tag 는 커밋별 short
+-#   SHA 이다. 배포 시점에 실제로 푸시된 참조로 <FRONTEND_IMAGE> 를 교체한다.
++#   registry + project 경로는 확정되었으므로 아래 image 필드에 고정해 두었다:
++#     team02-gitlab.manoit.co.kr:5050/root/devflow/frontend
++#   커밋마다 달라지는 것은 tag 뿐이므로 placeholder 는 <IMAGE_TAG>
++#   (= $CI_COMMIT_SHORT_SHA) 하나만 남는다. YAML 을 손으로 고치는 대신 배포
++#   시점에는 다음 명령으로 tag 만 갱신한다(Role/gitlab-deployer-role 이 정확히
++#   이 명령만 허용한다. k8s/rbac/gitlab-deployer-role.yaml:19 참고):
++#     kubectl -n devflow set image deployment/frontend \
++#       frontend=team02-gitlab.manoit.co.kr:5050/root/devflow/frontend:<short-sha>
+ #   `latest` 는 의도적으로 사용하지 않는다(불변·추적 가능한 tag 만 사용).
+ #
+-# 상태: AWS/EKS runtime 이 아직 없다. 이 manifest 는 apply 되지 않았다.
+ # 설치 방식: kubectl + YAML manifest 만 사용한다. Helm 은 사용하지 않는다.
+ ---
+ apiVersion: apps/v1
+@@ -82,7 +85,8 @@ spec:
+       terminationGracePeriodSeconds: 30
+       containers:
+         - name: frontend
+-          image: <FRONTEND_IMAGE>
++          # tag 만 배포 시점 값이다. registry/repository 는 확정값이므로 고정.
++          image: team02-gitlab.manoit.co.kr:5050/root/devflow/frontend:<IMAGE_TAG>
+           # 커밋별 불변 tag 를 사용하므로 재시작 시 다시 pull 할 필요가 없다.
+           imagePullPolicy: IfNotPresent
+           ports:
+diff --git a/k8s/ingress/ingress.yaml b/k8s/ingress/ingress.yaml
+index a09d8b8..2ddcc55 100644
+--- a/k8s/ingress/ingress.yaml
++++ b/k8s/ingress/ingress.yaml
+@@ -42,14 +42,13 @@
+ # 종료하지 않는다.
+ #
+ # EXTERNALDNS: hostname source 는 Kubernetes 표준 필드인 spec.rules[].host 다.
+-# 이는 Controller 에 설정된 --domain-filter=team02-app.manoit.co.kr 과 일치한다
+-# (k8s/controllers/external-dns/deployment.yaml).
++# 이 host 는 Controller 의 --domain-filter=manoit.co.kr (hosted zone 이름) 안에
++# 포함된다 (k8s/controllers/external-dns/deployment.yaml).
+ # external-dns.alpha.kubernetes.io/hostname annotation 은 의도적으로 사용하지
+ # 않는다. runtime 에서 discovery 실패가 확인될 때만 추가를 검토한다. GitLab
+ # hostname team02-gitlab.manoit.co.kr 은 여기서 절대 참조하지 않는다. 해당
+ # 도메인은 Terraform 이 관리하는 별도 ALB 와 DNS record 를 사용한다.
+ #
+-# 상태: AWS/EKS/ALB runtime 이 아직 없다. 이 manifest 는 apply 되지 않았다.
+ # 설치 방식: kubectl + YAML manifest 만 사용한다. Helm 은 사용하지 않는다.
+ ---
+ apiVersion: networking.k8s.io/v1

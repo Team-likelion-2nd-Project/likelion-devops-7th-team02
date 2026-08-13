@@ -1,3 +1,6 @@
+# dev 환경 입력 변수. db_password 와 certificate_arn 은 기본값이 없으므로
+# tfvars 또는 환경변수(TF_VAR_*)로 주입한다.
+
 variable "project_name" {
   description = "Project name"
   type        = string
@@ -78,11 +81,18 @@ variable "kubernetes_version" {
 variable "node_instance_type" {
   description = "Node Instance Type"
   type        = string
-  default     = "t3.medium"
+  default     = "t3.large"
 }
 
 variable "certificate_arn" {
-  description = "ACM arn"
+  description = "ACM arn (GitLab ALB HTTPS listener)"
   type        = string
   sensitive   = true
 }
+
+variable "application_domain" {
+  description = "Application domain covered by the Application ACM certificate (team02-app.manoit.co.kr). Must NOT be confused with the GitLab domain team02-gitlab.manoit.co.kr."
+  type        = string
+  default     = "team02-app.manoit.co.kr"
+}
+

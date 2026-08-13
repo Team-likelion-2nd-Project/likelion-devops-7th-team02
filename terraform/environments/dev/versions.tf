@@ -1,3 +1,4 @@
+# Terraform / Provider 버전 고정
 terraform {
   required_version = ">= 1.5.0"
 
