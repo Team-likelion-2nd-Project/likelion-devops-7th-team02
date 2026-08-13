@@ -1,3 +1,5 @@
+# EKS 모듈 입력 변수
+
 variable "project_name" {
   description = "Project name used for resource naming and tagging"
   type        = string
@@ -27,7 +29,7 @@ variable "kubernetes_version" {
 variable "node_instance_type" {
   description = "EC2 instance type for managed node group"
   type        = string
-  default     = "t3.medium"
+  default     = "t3.large"
 }
 
 variable "node_min_size" {

@@ -1,3 +1,5 @@
+# Security 모듈 입력 변수
+
 variable "project_name" {
   description = "Project name"
   type        = string

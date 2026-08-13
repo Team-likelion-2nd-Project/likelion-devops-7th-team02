@@ -1,3 +1,5 @@
+# EKS 모듈 출력값 (다른 모듈의 IRSA 설정에서 OIDC 관련 값을 참조한다)
+
 output "cluster_name" {
   description = "EKS cluster name"
   value       = aws_eks_cluster.main.name

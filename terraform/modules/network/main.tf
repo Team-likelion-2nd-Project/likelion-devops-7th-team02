@@ -1,3 +1,5 @@
+# Network 모듈: VPC, Subnet(3계층), IGW/NAT, Route Table 구성
+
 locals {
   common_tags = {
     Project     = var.project_name
@@ -26,6 +28,7 @@ resource "aws_internet_gateway" "main" {
   })
 }
 
+# NAT Gateway 용 고정 공인 IP
 resource "aws_eip" "nat" {
   domain = "vpc"
 
@@ -34,6 +37,7 @@ resource "aws_eip" "nat" {
   })
 }
 
+# Private Subnet 의 아웃바운드 인터넷 경로 (단일 NAT)
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public[0].id
@@ -45,6 +49,8 @@ resource "aws_nat_gateway" "main" {
   depends_on = [aws_internet_gateway.main]
 }
 
+# Public Subnet: ALB 배치용.
+# kubernetes.io/role/elb 태그로 LBC 가 인터넷 향 ALB 서브넷을 자동 탐색한다.
 resource "aws_subnet" "public" {
   count = length(var.azs)
 
@@ -61,6 +67,7 @@ resource "aws_subnet" "public" {
   })
 }
 
+# Private App Subnet: EKS Node 배치용 (internal-elb 태그)
 resource "aws_subnet" "private_app" {
   count = length(var.azs)
 
@@ -75,6 +82,7 @@ resource "aws_subnet" "private_app" {
   })
 }
 
+# Private DB Subnet: RDS 전용 (라우팅 테이블 미연결 = 완전 격리)
 resource "aws_subnet" "private_db" {
   count = length(var.azs)
 
@@ -87,6 +95,7 @@ resource "aws_subnet" "private_db" {
   })
 }
 
+# Public 라우팅: 인터넷 게이트웨이로 나간다
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -100,6 +109,7 @@ resource "aws_route_table" "public" {
   })
 }
 
+# Private App 라우팅: NAT 를 통해서만 아웃바운드
 resource "aws_route_table" "private_app" {
   vpc_id = aws_vpc.main.id
 
@@ -113,6 +123,7 @@ resource "aws_route_table" "private_app" {
   })
 }
 
+# Subnet - Route Table 연결
 resource "aws_route_table_association" "public_a" {
   subnet_id      = aws_subnet.public[0].id
   route_table_id = aws_route_table.public.id
