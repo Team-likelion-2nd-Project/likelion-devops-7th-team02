@@ -17,8 +17,17 @@ aws eks update-kubeconfig \
 echo "=== Apply Kubernetes manifests ==="
 
 kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/frontend/
-kubectl apply -f k8s/backend/
+
+kubectl apply -f k8s/frontend/serviceaccount.yaml
+kubectl apply -f k8s/frontend/configmap.yaml
+kubectl apply -f k8s/frontend/service.yaml
+kubectl apply -f k8s/frontend/deployment.yaml
+
+kubectl apply -f k8s/backend/serviceaccount.yaml
+kubectl apply -f k8s/backend/configmap.yaml
+kubectl apply -f k8s/backend/service.yaml
+kubectl apply -f k8s/backend/deployment.yaml
+kubectl apply -f k8s/backend/hpa.yaml
 
 echo "=== Update Frontend Image ==="
 
