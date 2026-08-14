@@ -296,4 +296,3 @@ Infra 담당자의 Kubernetes Manifest 테스트 및 공유가 완료되면 다�
 15. Dashboard JSON Export 및 저장소 반영
 16. Pipeline Webhook 구성
 17. CI/CD 운영 문서 및 장애 대응 문서 작성
-
