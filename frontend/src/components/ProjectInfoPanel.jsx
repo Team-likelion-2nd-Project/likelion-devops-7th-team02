@@ -20,7 +20,7 @@ function ProjectInfoPanel({
 
         <div className="project-info-row">
           <span>프로젝트 생성일</span>
-          <strong>{project.createAt}</strong>
+          <strong>{project.createdAt}</strong>
         </div>
       </div>
     </section>
