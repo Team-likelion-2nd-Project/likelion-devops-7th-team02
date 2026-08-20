@@ -47,7 +47,6 @@ function LoginPage() {
 
       navigate('/projects')
     } catch (error) {
-      const errorCode = error.response?.data?.code
       const message = error.response?.data?.message
 
       
