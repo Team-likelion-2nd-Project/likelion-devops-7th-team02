@@ -1,5 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import {
+  setAccessToken,
+  setTokenType,
+} from '../utils/authStorage'
 import { login } from '../api/authApi'
 import { Eye, EyeOff, X } from 'lucide-react'
 import './Auth.css'
@@ -35,8 +39,8 @@ function LoginPage() {
 
       const { accessToken, tokenType } = response.data.data
 
-      localStorage.setItem('accessToken', accessToken)
-      localStorage.setItem('tokenType', tokenType)
+      setAccessToken(accessToken)
+      setTokenType(tokenType)
 
       navigate('/projects')
     } catch (error) {

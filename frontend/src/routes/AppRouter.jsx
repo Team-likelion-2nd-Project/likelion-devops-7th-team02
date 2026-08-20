@@ -5,6 +5,8 @@ import {
   Routes,
 } from 'react-router-dom'
 
+import { getAccessToken } from '../utils/authStorage'
+
 import MainLayout from '../layouts/MainLayout'
 
 import HealthPage from '../pages/HealthPage'
@@ -14,7 +16,7 @@ import ProjectListPage from '../pages/ProjectListPage'
 import SignupPage from '../pages/SignupPage'
 
 function RootRedirect() {
-  const accessToken = localStorage.getItem('accessToken')
+  const accessToken = getAccessToken()
 
   return (
     <Navigate
@@ -25,7 +27,7 @@ function RootRedirect() {
 }
 
 function ProtectedRoute({ children }) {
-  const accessToken = localStorage.getItem('accessToken')
+  const accessToken = getAccessToken()
 
   if (!accessToken) {
     return (

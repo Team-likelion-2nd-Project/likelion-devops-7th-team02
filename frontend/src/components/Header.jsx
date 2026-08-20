@@ -10,6 +10,11 @@ import {
   UserRound,
 } from 'lucide-react'
 
+import {
+  clearAuthStorage,
+  getAccessToken,
+} from '../utils/authStorage'
+
 import ProjectContext from '../context/ProjectContext'
 import ProfileModal from './ProfileModal'
 
@@ -24,8 +29,7 @@ function Header() {
   const [isProfileModalOpen, setIsProfileModalOpen] =
     useState(false)
 
-  const accessToken =
-    localStorage.getItem('accessToken')
+  const accessToken = getAccessToken()
 
   const hasToken = Boolean(accessToken)
   const isLoggedIn =
@@ -33,17 +37,20 @@ function Header() {
 
   const handleLogin = () => {
     setIsProfileMenuOpen(false)
-    navigate('/login')
+    navigate('/login', {
+      replace: true,
+    })
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('tokenType')
+    clearAuthStorage()
 
     setIsProfileMenuOpen(false)
     setIsProfileModalOpen(false)
 
-    navigate('/login')
+    navigate('/login', {
+      replace: true,
+    })
   }
 
   const handleProfileOpen = () => {
