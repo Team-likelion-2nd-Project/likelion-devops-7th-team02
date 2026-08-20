@@ -108,6 +108,16 @@
   font-size: 13px;
 }
 
+.auth-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #EEF2FE;
+  color: #4A6FD8;
+  font-size: 13px;
+  text-align: center;
+}
+
 /* Input Actions */
 .email-input,
 .password-input {

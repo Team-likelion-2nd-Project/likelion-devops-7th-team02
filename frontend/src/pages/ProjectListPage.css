@@ -186,6 +186,7 @@
 
 .dashboard-my-task-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .dashboard-my-task-item {
@@ -207,6 +208,7 @@
 
 .dashboard-my-task-content {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
 
   min-width: 0;
@@ -270,6 +272,7 @@
 /* Updates */
 .dashboard-update-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .dashboard-update-item {
@@ -308,6 +311,7 @@
 }
 
 .dashboard-update-item > div > span {
+  min-width: 0;
   overflow: hidden;
 
   color: #374151;

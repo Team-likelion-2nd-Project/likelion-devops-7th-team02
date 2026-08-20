@@ -1,3 +1,5 @@
+import { formatDate } from "../utils/data"
+
 function ProjectInfoPanel({
   project,
   memberCount,
@@ -20,7 +22,7 @@ function ProjectInfoPanel({
 
         <div className="project-info-row">
           <span>프로젝트 생성일</span>
-          <strong>{project.createdAt}</strong>
+          <strong>{formatDate(project.createdAt)}</strong>
         </div>
       </div>
     </section>

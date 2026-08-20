@@ -76,6 +76,7 @@
 /* Form */
 .task-modal-field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 
   margin-bottom: 18px;
@@ -91,6 +92,7 @@
 .task-modal-field textarea,
 .task-modal-field select {
   width: 100%;
+  min-width: 0;
   padding: 11px 12px;
 
   border: 1px solid #d1d5db;
