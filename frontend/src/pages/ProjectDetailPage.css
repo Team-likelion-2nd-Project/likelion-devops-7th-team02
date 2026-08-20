@@ -53,6 +53,7 @@
 
 .project-main-column {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
 
   min-width: 0;
@@ -210,7 +211,10 @@
   top: 84px;
 
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+
+  min-width: 0;
 }
 
 .project-side-card {
@@ -228,6 +232,7 @@
 /* Project Info */
 .project-info-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
 
   margin-top: 12px;
 }
@@ -273,6 +278,7 @@
 
 .project-member-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
 }
 
@@ -280,6 +286,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
+
+  min-width: 0;
 
   padding: 8px;
 
@@ -319,6 +327,7 @@
 }
 
 .project-member-info strong {
+  min-width: 0;
   overflow: hidden;
 
   color: #111827;
@@ -331,6 +340,7 @@
 }
 
 .project-member-info span {
+  flex-shrink: 0;
   color: #9ca3af;
   font-size: 11px;
 }
@@ -338,6 +348,7 @@
 /* Service Status */
 .service-status-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
 
   margin-top: 12px;
 }
