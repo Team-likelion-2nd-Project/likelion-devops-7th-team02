@@ -32,6 +32,8 @@
   color: #111827;
   font-size: 28px;
   font-weight: 700;
+
+  overflow-wrap: anywhere;
 }
 
 .project-detail-header p {
@@ -198,6 +200,7 @@
 
 .task-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 

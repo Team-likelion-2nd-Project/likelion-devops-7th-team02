@@ -12,6 +12,7 @@ import Loading from '../components/Loading'
 import ErrorMessage from '../components/ErrorMessage'
 import { useProjectDetailData } from '../hooks/useProjectDetailData'
 import { normalizeTask } from '../utils/task'
+import CollapsibleText from '../components/CollapsibleText'
 
 import { addMember } from '../api/memberApi'
 import {
@@ -237,7 +238,7 @@ function ProjectDetailContent({ projectId }) {
       <div className="project-detail-header">
         <div>
           <h1>{project.name}</h1>
-          <p>{project.description}</p>
+          <CollapsibleText text={project.description} />
         </div>
       </div>
 

@@ -8,7 +8,10 @@
 
   width: 240px;
   min-width: 240px;
+  max-width: 240px;
   height: calc(100vh - 64px);
+
+  overflow: hidden;
 
   padding: 20px 14px;
 
@@ -19,6 +22,7 @@
 /* Project Section */
 .sidebar-section {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -57,6 +61,7 @@
 /* Project List */
 .sidebar-project-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
 }
 
@@ -64,6 +69,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
+
+  min-width: 0;
 
   padding: 10px;
 
@@ -74,7 +81,13 @@
   font-weight: 500;
 }
 
-.sidebar-project-item span {
+.sidebar-project-item > * {
+  flex: none;
+}
+
+.sidebar-project-item > span {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
 
   text-overflow: ellipsis;
@@ -95,6 +108,7 @@
 /* Project Detail Info */
 .sidebar-bottom {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 

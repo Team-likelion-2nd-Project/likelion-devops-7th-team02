@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   setAccessToken,
   setTokenType,
@@ -10,6 +10,9 @@ import './Auth.css'
 
 function LoginPage() {
   const navigate = useNavigate()
+
+  const [searchParams] = useSearchParams()
+  const isSessionExpired = searchParams.get('reason') === 'expired'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -44,11 +47,9 @@ function LoginPage() {
 
       navigate('/projects')
     } catch (error) {
-      const errorCode = error.response?.data?.code
       const message = error.response?.data?.message
 
-      console.log(errorCode, message)
-
+      
       setErrorMessage(
         message ?? '요청 처리 중 오류가 발생했습니다.'
       )
@@ -120,6 +121,12 @@ function LoginPage() {
               </button>
             </div>
           </div>
+
+          {isSessionExpired && !errorMessage && (
+            <p className="auth-notice" role="status">
+              로그인이 만료되었습니다. 다시 로그인해주세요.
+            </p>
+          )}
 
           {errorMessage && (
             <p className="auth-error" role="alert">
