@@ -140,20 +140,19 @@ Grafana 접속 후 Prometheus가 Data Source로 정상 연결되어 있는지 �
 
 Grafana Dashboard에서는 다음 항목을 우선적으로 구성합니다.
 
-- Backend HTTP Request
-- Backend HTTP Error Rate
-- Backend Response Time
-- JVM Memory Usage
-- Process CPU Usage
-- Pod CPU Usage
-- Pod Memory Usage
-- Pod Restart Count
-- Deployment Replica 상태
+- Backend Status
+- Backend CPU Usage
+- Backend JVM Heap Memory Usage
+- Backend Replicas
+- Backend HPA Desired Replicas
+- EKS Node CPU Usage
+- EKS Node Memory Usage
+- Application Pod Status
 
 Dashboard 구성이 완료되면 Grafana에서 Dashboard JSON을 Export하여 저장소에 보관합니다.
 
 ```text
-monitoring/grafana/dashboards/devflow-backend.json
+monitoring/grafana/dashboards/devflow-eks-monitoring.json
 ```
 
 ---
@@ -219,80 +218,228 @@ scripts/
 
 ## 현재 진행 상태
 
-현재까지 다음 작업이 완료되었습니다.
+현재 CI/CD 및 Monitoring 환경의 실제 EKS 검증까지 완료되었습니다.
+
+### CI/CD
 
 - GitLab Runner 구성
 - Docker Executor 구성
-- Docker Socket Mount 구성
-- Frontend Build 검증
-- Backend Build 검증
-- Backend Test 검증
-- Frontend Docker Image Build 및 Registry Push
-- Backend Docker Image Build 및 Registry Push
-- Commit SHA 기반 Image Tag 적용
-- AWS IAM 인증 검증
-- GitLab Runner에서 EKS 접근 검증
-- kubectl 접근 검증
-- Kubernetes Deploy Job 구성
-- Health Check Job 구성
-- Rollback Job 구성
-- `deploy.sh` 작성
-- `health-check.sh` 작성
-- `rollback.sh` 작성
-- Backend Actuator 구성 확인
-- Micrometer Prometheus Registry 구성 확인
-- `/actuator/prometheus` 접근 설정 확인
+- Frontend / Backend Build 검증
+- Backend Unit Test 검증
+- Docker Image Build 및 GitLab Container Registry Push
+- Commit SHA 기반 Docker Image Tag 적용
+- GitLab Runner에서 AWS / EKS 접근 검증
+- Kubernetes Deploy Job 구성 및 실제 배포 검증
+- Frontend / Backend Rolling Update 검증
+- Health Check Job 구성 및 실제 검증
+- Rollback 구성 및 검증
 
-현재 GitLab Container Registry에 다음 이미지가 Push된 상태입니다.
+### Kubernetes
+
+- Frontend / Backend Deployment 정상 동작 확인
+- Frontend / Backend Service 정상 동작 확인
+- Backend HPA 구성 및 실제 Scale-out / Scale-in 검증
+- Backend Pod Self-Healing 검증
+- Metrics Server를 통한 CPU / Memory Metrics 수집 확인
+
+HPA 설정:
 
 ```text
-Frontend
-team02-gitlab.manoit.co.kr:5050/root/devflow/frontend:ad0087fe
+Min Replicas : 2
+Max Replicas : 4
+CPU Target   : 70%
+```
 
-Backend
-team02-gitlab.manoit.co.kr:5050/root/devflow/backend:ad0087fe
+실제 부하 테스트 결과:
+
+```text
+Scale-out
+2 → 3 → 4
+
+Scale-in
+4 → 3 → 2
+```
+
+실제 서비스 API인 다음 Path를 대상으로 JWT 인증 요청을 반복하여 HPA 동작을 추가 검증했습니다.
+
+```http
+GET /api/projects
+```
+
+테스트 중 Backend CPU 사용률이 HPA Target을 초과하여 최대 103%까지 상승했으며 Backend Replica가 최대 4개까지 증가한 후 부하 종료 시 다시 2개로 감소하는 것을 확인했습니다.
+
+상세 테스트 결과:
+
+```text
+docs/kubernetes-test.md
 ```
 
 ---
 
-## 현재 대기 사항
+## Prometheus 검증 결과
 
-Application 및 Monitoring Kubernetes Manifest는 Infra 담당자가 작성하여 테스트 중입니다.
+Prometheus가 다음 Target의 Metrics를 정상적으로 수집하는 것을 확인했습니다.
 
-현재 해당 YAML 파일이 저장소에 공유되지 않았기 때문에 다음 작업은 아직 실제 환경에서 수행하지 않았습니다.
+```text
+Prometheus           UP
+Backend Pod 1        UP
+Backend Pod 2        UP
+node-exporter 1      UP
+node-exporter 2      UP
+kube-state-metrics   UP
+```
 
-- Kubernetes Manifest 실제 적용
-- GitLab CI/CD를 통한 실제 EKS Deploy 검증
-- Frontend / Backend Rollout 실제 검증
-- Health Check Job 실제 검증
-- Rollback Job 실제 검증
-- Prometheus 실제 배포 및 Target 확인
-- Backend Metrics 수집 확인
-- Grafana 실제 배포 및 Data Source 연결
-- Grafana Dashboard 구성
+Backend Metrics는 다음 Endpoint를 통해 수집합니다.
 
-따라서 현재 단계는 **CI/CD 및 Monitoring 연계를 위한 코드와 스크립트 준비는 완료되었으며, Infra Kubernetes Manifest 공유 후 실제 EKS 환경 검증을 진행하기 위한 대기 상태**입니다.
+```text
+/actuator/prometheus
+```
+
+Prometheus에서 다음 Metrics가 정상적으로 수집되는 것을 확인했습니다.
+
+- Backend Process CPU
+- Backend JVM Memory
+- Kubernetes Deployment Replica
+- HPA Desired Replica
+- Pod Status
+- Node CPU
+- Node Memory
 
 ---
 
-## 향후 작업
+## Grafana 검증 결과
 
-Infra 담당자의 Kubernetes Manifest 테스트 및 공유가 완료되면 다음 순서로 작업합니다.
+Grafana와 Prometheus Data Source 연결을 완료하고 다음 메시지를 통해 정상 연결을 확인했습니다.
 
-1. Kubernetes Manifest 구조 확인
-2. Namespace / Deployment / Container / Service 이름 정합성 확인
-3. Registry Image 및 ImagePullSecret 설정 확인
-4. `deploy.sh`와 Kubernetes Manifest 경로 정합성 확인
-5. GitLab `deploy-dev` Job 실행
-6. Frontend / Backend Pod 및 Rollout 상태 확인
-7. `health-check-dev` 실행
-8. Backend Readiness / Liveness 확인
-9. `rollback-dev`를 통한 Rollback 검증
-10. Prometheus Pod 및 Service 확인
-11. Prometheus Backend Target 확인
-12. `/actuator/prometheus` Metrics 수집 확인
-13. Grafana Prometheus Data Source 연결 확인
-14. DevFlow Grafana Dashboard 구성
-15. Dashboard JSON Export 및 저장소 반영
-16. Pipeline Webhook 구성
-17. CI/CD 운영 문서 및 장애 대응 문서 작성
+```text
+Successfully queried the Prometheus API.
+```
+
+Grafana에서 Prometheus의 `up` Metric을 조회하여 Backend, node-exporter, kube-state-metrics 및 Prometheus Target이 모두 정상 상태임을 확인했습니다.
+
+현재 DevFlow Dashboard는 다음 8개의 패널로 구성되어 있습니다.
+
+| Panel | 설명 |
+|---|---|
+| Backend Status | Backend Prometheus Target 상태 |
+| Backend CPU Usage | Backend Pod별 CPU 사용률 |
+| Backend JVM Heap Memory Usage | Backend Pod별 JVM Heap Memory |
+| Backend Replicas | Backend Deployment Replica 변화 |
+| Backend HPA Desired Replicas | HPA가 요청하는 Replica 변화 |
+| EKS Node CPU Usage | Worker Node CPU 사용률 |
+| EKS Node Memory Usage | Worker Node Memory 사용률 |
+| Application Pod Status | Frontend / Backend Pod Ready 상태 |
+
+Grafana Dashboard JSON은 다음 경로에서 관리합니다.
+
+```text
+monitoring/grafana/dashboards/devflow-eks-monitoring.json
+```
+
+Dashboard를 Git Repository에서 관리하여 Grafana 환경이 재생성되더라도 동일한 Monitoring Dashboard를 재구성할 수 있도록 합니다.
+
+---
+
+## Monitoring Architecture
+
+현재 Monitoring 흐름은 다음과 같습니다.
+
+```text
+DevFlow Backend
+     │
+     │ /actuator/prometheus
+     ▼
+Prometheus
+     │
+     ├── Backend Metrics
+     ├── kube-state-metrics
+     └── node-exporter
+     │
+     ▼
+Grafana
+     │
+     ▼
+DevFlow EKS Monitoring Dashboard
+```
+
+HPA 테스트 시에는 다음 흐름을 Grafana와 Kubernetes에서 함께 확인할 수 있습니다.
+
+```text
+GET /api/projects 반복 요청
+        ↓
+Backend CPU 증가
+        ↓
+HPA CPU Target 70% 초과
+        ↓
+Desired Replica 증가
+        ↓
+Backend Replica
+2 → 3 → 4
+        ↓
+부하 종료
+        ↓
+CPU 감소
+        ↓
+Backend Replica
+4 → 3 → 2
+```
+
+---
+
+## Grafana 접근
+
+Grafana Service는 Kubernetes `ClusterIP`로 구성되어 있어 외부에 직접 노출하지 않습니다.
+
+필요한 경우 AWS Systems Manager Port Forwarding과 Kubernetes Port Forwarding을 이용하여 접근합니다.
+
+```text
+Local Browser
+      ↓
+AWS SSM Port Forwarding
+      ↓
+Management EC2
+      ↓
+kubectl port-forward
+      ↓
+Grafana Service
+```
+
+이는 Monitoring UI를 Public Internet에 직접 노출하지 않고 필요한 경우에만 관리 경로를 통해 접근하기 위한 구성입니다.
+
+---
+
+## Dashboard 관리
+
+Grafana UI에서 수정한 Dashboard는 변경 후 JSON으로 Export하여 Repository에 반영합니다.
+
+```text
+monitoring/
+├── README.md
+└── grafana/
+    └── dashboards/
+        └── devflow-eks-monitoring.json
+```
+
+JSON 유효성은 다음 명령으로 확인할 수 있습니다.
+
+```bash
+python3 -m json.tool \
+  monitoring/grafana/dashboards/devflow-eks-monitoring.json \
+  >/dev/null && echo "JSON OK"
+```
+
+---
+
+## 향후 개선 사항
+
+현재 프로젝트에서는 Prometheus와 Grafana를 Kubernetes Manifest 기반으로 구성하고 Dashboard JSON을 Git에서 관리합니다.
+
+향후 다음 항목을 개선할 수 있습니다.
+
+1. Grafana Dashboard ConfigMap / Provider 기반 자동 Provisioning
+2. Grafana Persistent Volume 적용
+3. Alertmanager 기반 장애 알림
+4. Slack / Discord Monitoring Alert 연계
+5. Backend HTTP Request Rate / Error Rate / Response Time Dashboard 고도화
+6. Prometheus 장기 Metrics Storage 구성
+7. Monitoring Manifest의 Helm 또는 GitOps 기반 관리
