@@ -70,7 +70,7 @@
 
 ## Architecture
 
-![아키텍처](./docs/images/architecture.png)
+![아키텍처](./docs/images/2차 아키텍쳐.png)
 
 ```text
                               Internet
